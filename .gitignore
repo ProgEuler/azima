@@ -18,6 +18,8 @@
 # production
 /build
 
+.puku-cli
+
 # misc
 .DS_Store
 *.pem
