@@ -55,15 +55,17 @@ export function AuthShell({
 
 			{/* RIGHT PANEL */}
 			<div className="relative flex min-h-screen flex-col justify-center px-8">
-				<Button
-					className="absolute top-7 left-5"
-					variant="ghost"
-					render={<Link href={backHref} />}
-					nativeButton={false}
-				>
-					<CaretLeftIcon data-icon="inline-start" />
-					{backLabel}
-				</Button>
+				{backHref ? (
+					<Button
+						className="absolute top-7 left-5"
+						variant="ghost"
+						render={<Link href={backHref} />}
+						nativeButton={false}
+					>
+						<CaretLeftIcon data-icon="inline-start" />
+						{backLabel ?? "Home"}
+					</Button>
+				) : null}
 
 				<div className="mx-auto w-full space-y-6 sm:w-sm">
 					{showMobileLogo && <Logo className="h-4.5 lg:hidden" />}

@@ -17,9 +17,8 @@ import {
 
 export function SubmittedCard() {
 	return (
-		<OnboardingShell backHref="/" backLabel="Home">
+		<OnboardingShell>
 			<div className="flex flex-col items-center gap-4 text-center">
-				<OnboardingStepper current={3} />
 				<div className="flex size-14 items-center justify-center rounded-full bg-primary/10 text-primary">
 					<CheckCircleIcon weight="fill" className="size-8" />
 				</div>
@@ -28,12 +27,12 @@ export function SubmittedCard() {
 						Application submitted
 					</h1>
 					<p className="text-muted-foreground">
-						Azima reviews your business.
+						Thank you for your application. We will review it shortly.
 					</p>
 				</div>
 			</div>
 
-			<Card className="border-foreground/10 bg-card/60">
+			<div className="mt-8 w-full">
 				<CardHeader>
 					<CardTitle className="flex items-center gap-2">
 						<ClockClockwiseIcon className="size-4 text-muted-foreground" />
@@ -98,7 +97,7 @@ export function SubmittedCard() {
 						View status
 					</Button>
 				</CardFooter>
-			</Card>
+			</div>
 		</OnboardingShell>
 	)
 }

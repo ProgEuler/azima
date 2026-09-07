@@ -1,23 +1,16 @@
 import type { ReactNode } from "react"
 import Image from "next/image"
-import Link from "next/link"
 
 import { Logo } from "@/components/logo"
-import { Button } from "@/components/ui/button"
-import { CaretLeftIcon } from "@phosphor-icons/react"
 
 import trianglesSvg from "@/assets/svgs/triangles.svg"
 
 type OnboardingShellProps = {
 	children: ReactNode
-	backHref?: string
-	backLabel?: string
 }
 
 export function OnboardingShell({
 	children,
-	backHref = "/",
-	backLabel = "Home",
 }: OnboardingShellProps) {
 	return (
 		<main className="relative min-h-screen overflow-hidden">
@@ -29,24 +22,16 @@ export function OnboardingShell({
 				aria-hidden
 				className="pointer-events-none absolute inset-0 -z-10 h-full w-full object-cover opacity-40"
 			/>
-			<div className="pointer-events-none absolute inset-0 bg-linear-to-b from-transparent via-transparent to-background" />
 
-			{/* Top-left: back button + logo */}
-			<div className="relative z-10 absolute top-7 left-5 flex items-center gap-3">
-				<Button
-					variant="ghost"
-					render={<Link href={backHref} />}
-					nativeButton={false}
-				>
-					<CaretLeftIcon data-icon="inline-start" />
-					{backLabel}
-				</Button>
-				<Logo className="h-4.5" />
-			</div>
+				<div className="absolute top-0 left-0 z-10 p-6">
+					<Logo size="lg" />
+				</div>
 
-			{/* Centered content */}
-			<div className="relative z-10 mx-auto flex w-full max-w-md flex-col justify-center px-6 py-20 sm:max-w-lg">
-				{children}
+			{/* Centered form area */}
+			<div className="relative z-10 flex min-h-screen w-full items-center justify-center px-6 pt-24 pb-10">
+				<div className="w-full max-w-md sm:max-w-lg">
+					{children}
+				</div>
 			</div>
 		</main>
 	)

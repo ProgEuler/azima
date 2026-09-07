@@ -1,22 +1,20 @@
 "use client"
 
 import { useState } from "react"
+import Link from "next/link"
 import { useRouter } from "next/navigation"
 import { useForm } from "react-hook-form"
 import { zodResolver } from "@hookform/resolvers/zod"
 import { z } from "zod"
 import {
-	EnvelopeIcon,
 	EyeClosedIcon,
 	EyeIcon,
-	LockIcon,
-	PhoneIcon,
-	StorefrontIcon,
 } from "@phosphor-icons/react"
 
 import { OnboardingShell } from "@/components/onboarding-shell"
 import { OnboardingStepper } from "@/components/onboarding-stepper"
 import { Button } from "@/components/ui/button"
+import { Field } from "@/components/ui/field"
 import {
 	InputGroup,
 	InputGroupAddon,
@@ -63,36 +61,34 @@ export function ApplyForm() {
 	})
 
 	return (
-		<OnboardingShell backHref="/" backLabel="Home">
-			<form className="space-y-6" onSubmit={onSubmit} noValidate>
-				<div className="flex flex-col items-start gap-3">
+		<OnboardingShell>
+			<form className="space-y-8" onSubmit={onSubmit} noValidate>
+				<div className="flex flex-col items-start gap-4">
 					<OnboardingStepper current={1} />
-					<div className="space-y-1">
-						<h1 className="font-bold text-2xl tracking-wide">
-							Apply as a Caterer
+					<div className="space-y-2">
+						<h1 className="font-bold text-3xl tracking-tight sm:text-4xl">
+							Apply as a caterer
 						</h1>
-						<p className="text-muted-foreground">
-							Tell us how to reach your business. Hosts will use these details
-							to contact you.
+						<p className="text-muted-foreground text-sm sm:text-base">
+							First, the account you will sign in with. Nothing is
+							visible to hosts until azima approves your business.
 						</p>
 					</div>
 				</div>
 
-				<div className="space-y-3">
+				{/* 2-column grid */}
+				<div className="grid grid-cols-1 gap-x-4 gap-y-5 sm:grid-cols-2">
 					<Field
 						label="Business name"
 						error={errors.businessName?.message}
 					>
 						<InputGroup>
 							<InputGroupInput
-								placeholder="e.g. Sahara Catering"
+								placeholder="Yummy Catering"
 								autoComplete="organization"
 								aria-invalid={!!errors.businessName}
 								{...register("businessName")}
 							/>
-							<InputGroupAddon align="inline-start">
-								<StorefrontIcon />
-							</InputGroupAddon>
 						</InputGroup>
 					</Field>
 
@@ -100,32 +96,27 @@ export function ApplyForm() {
 						<InputGroup>
 							<InputGroupInput
 								type="email"
-								placeholder="you@business.com"
+								placeholder="kitchen@yourbusiness.com"
 								autoComplete="email"
 								aria-invalid={!!errors.businessEmail}
 								{...register("businessEmail")}
 							/>
-							<InputGroupAddon align="inline-start">
-								<EnvelopeIcon />
-							</InputGroupAddon>
 						</InputGroup>
 					</Field>
 
 					<Field
 						label="Phone hosts will call"
 						error={errors.phone?.message}
+						hint="Shown to a host once you accept their request."
 					>
 						<InputGroup>
 							<InputGroupInput
 								type="tel"
-								placeholder="+1 555 123 4567"
+								placeholder="+961 3 000 000"
 								autoComplete="tel"
 								aria-invalid={!!errors.phone}
 								{...register("phone")}
 							/>
-							<InputGroupAddon align="inline-start">
-								<PhoneIcon />
-							</InputGroupAddon>
 						</InputGroup>
 					</Field>
 
@@ -138,9 +129,6 @@ export function ApplyForm() {
 								aria-invalid={!!errors.password}
 								{...register("password")}
 							/>
-							<InputGroupAddon align="inline-start">
-								<LockIcon />
-							</InputGroupAddon>
 							<InputGroupAddon align="inline-end">
 								<InputGroupButton
 									type="button"
@@ -164,44 +152,26 @@ export function ApplyForm() {
 				</div>
 
 				<Button
-					className="w-full"
+					className="w-full rounded-full"
 					size="lg"
 					type="submit"
 					disabled={isSubmitting}
 				>
 					Continue
 				</Button>
+
+				<p className="text-center text-sm text-muted-foreground">
+					Already approved?{" "}
+					<Button
+						variant="link"
+						className="h-auto p-0 text-sm font-semibold text-foreground"
+						render={<Link href="/signin" />}
+						nativeButton={false}
+					>
+						Sign in
+					</Button>
+				</p>
 			</form>
 		</OnboardingShell>
-	)
-}
-
-function Field({
-	label,
-	error,
-	children,
-}: {
-	label: string
-	error?: string
-	children: React.ReactNode
-}) {
-	return (
-		<div className="space-y-1.5">
-			<Label>{label}</Label>
-			{children}
-			{error ? (
-				<p role="alert" className="text-destructive text-xs">
-					{error}
-				</p>
-			) : null}
-		</div>
-	)
-}
-
-function Label({ children }: { children: React.ReactNode }) {
-	return (
-		<label className="font-medium text-foreground text-xs leading-none">
-			{children}
-		</label>
 	)
 }

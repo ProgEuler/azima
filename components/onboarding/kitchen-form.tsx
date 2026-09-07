@@ -5,394 +5,278 @@ import { useRouter } from "next/navigation"
 import { useForm, Controller } from "react-hook-form"
 import { zodResolver } from "@hookform/resolvers/zod"
 import { z } from "zod"
-import {
-	CakeIcon,
-	CityIcon,
-	CoffeeIcon,
-	ForkKnifeIcon,
-	MapPinIcon,
-	StarIcon,
-	UsersThreeIcon,
-	WineIcon,
-} from "@phosphor-icons/react"
 
 import { OnboardingShell } from "@/components/onboarding-shell"
 import { OnboardingStepper } from "@/components/onboarding-stepper"
 import { Button } from "@/components/ui/button"
-import { Checkbox } from "@/components/ui/checkbox"
-import {
-	InputGroup,
-	InputGroupAddon,
-	InputGroupInput,
-} from "@/components/ui/input-group"
-import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group"
+import { InputGroup, InputGroupInput } from "@/components/ui/input-group"
 import { Textarea } from "@/components/ui/textarea"
+import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group"
+import { cn } from "@/lib/utils"
+import { Badge } from "../ui/badge"
+import { Label } from "../ui/label"
+import { Slider } from "../ui/slider"
 
-const serviceOptions = [
-	{ value: "catering", label: "Catering", Icon: ForkKnifeIcon },
-	{ value: "sweets", label: "Sweets", Icon: CakeIcon },
-	{ value: "drinks", label: "Drinks", Icon: CoffeeIcon },
-	{ value: "beverages", label: "Beverages", Icon: WineIcon },
+const serviceOptions = ["Catering", "Sweets", "Drinks"] as const
+const noticeOptions = [
+   { value: "any", label: "Any date, including today" },
+   { value: "48h", label: "At least 48 hours" },
 ] as const
 
-type ServiceValue = (typeof serviceOptions)[number]["value"]
+const schema = z.object({
+   services: z
+      .array(z.enum(serviceOptions))
+      .min(1, "Select at least one service"),
+   city: z.string().min(2, "City is required"),
+   bio: z.string().min(10, "Tell hosts a bit about what you do"),
+   // One field, two numbers — written by the dual-thumb slider.
+   orderRange: z
+      .tuple([
+         z.number().int().nonnegative(),
+         z.number().int().nonnegative(),
+      ])
+      .refine(([min, max]) => max >= min, {
+         message: "Largest order must be \u2265 smallest",
+         path: [1],
+      }),
+   notice: z.enum(["any", "48h"], {
+      message: "Select one",
+   }),
+})
 
-const schema = z
-	.object({
-		whatYouCook: z.string().min(2, "Tell us what you cook"),
-		capacity: z
-			.coerce
-			.number({ message: "Capacity is required" })
-			.int("Whole numbers only")
-			.positive("Must be greater than zero"),
-		services: z
-			.array(z.enum(["catering", "sweets", "drinks", "beverages"]))
-			.min(1, "Select at least one service"),
-		city: z.string().min(2, "City is required"),
-		knownFor: z.string().min(2, "Tell hosts what you're known for"),
-		smallestOrder: z.coerce
-			.number({ message: "Required" })
-			.int("Whole numbers only")
-			.positive("Must be greater than zero"),
-		largestOrder: z.coerce
-			.number({ message: "Required" })
-			.int("Whole numbers only")
-			.positive("Must be greater than zero"),
-		notice: z.enum(["any", "48h"], {
-			message: "Choose how much notice you need",
-		}),
-	})
-	.refine((d) => d.largestOrder >= d.smallestOrder, {
-		message: "Largest order must be \u2265 smallest order",
-		path: ["largestOrder"],
-	})
-
-type FormInput = z.input<typeof schema>
-type FormOutput = z.output<typeof schema>
+type FormValues = z.infer<typeof schema>
 
 export function KitchenForm() {
-	const router = useRouter()
+   const router = useRouter()
 
-	const {
-		register,
-		control,
-		handleSubmit,
-		formState: { errors, isSubmitting },
-	} = useForm<FormInput, unknown, FormOutput>({
-		resolver: zodResolver(schema),
-		defaultValues: {
-			whatYouCook: "",
-			capacity: "" as unknown as number,
-			services: [],
-			city: "",
-			knownFor: "",
-			smallestOrder: "" as unknown as number,
-			largestOrder: "" as unknown as number,
-			notice: undefined as unknown as FormOutput["notice"],
-		},
-	})
+   const {
+      register,
+      handleSubmit,
+      control,
+      formState: { errors, isSubmitting },
+   } = useForm<FormValues>({
+      resolver: zodResolver(schema),
+      mode: "onSubmit",
+      reValidateMode: "onChange",
+      defaultValues: {
+         services: [],
+         city: "",
+         bio: "",
+         orderRange: [10, 80],
+         notice: undefined,
+      },
+   })
 
-	const onSubmit = handleSubmit(() => {
-		router.push("/onboarding/submitted")
-	})
+   const onSubmit = handleSubmit(() => {
+      router.push("/onboarding/submitted")
+   })
 
-	return (
-		<OnboardingShell backHref="/onboarding" backLabel="Back">
-			<form className="space-y-8" onSubmit={onSubmit} noValidate>
-				<div className="flex flex-col items-start gap-3">
-					<OnboardingStepper current={2} />
-					<div className="space-y-1">
-						<h1 className="font-bold text-2xl tracking-wide">Your Kitchen</h1>
-						<p className="text-muted-foreground">
-							Share the details that help hosts decide if you&apos;re the
-							right fit for their event.
-						</p>
-					</div>
-				</div>
+   return (
+      <OnboardingShell>
+         <form className="space-y-8" onSubmit={onSubmit} noValidate>
+            <div className="flex flex-col items-start gap-4">
+               <OnboardingStepper current={2} />
+               <div className="space-y-2">
+                  <h1 className="text-3xl font-bold tracking-tight sm:text-4xl">
+                     What you cook, and for how many
+                  </h1>
+                  <p className="text-sm text-muted-foreground sm:text-base">
+                     This is what hosts see and what we match their occasions
+                     against, so keep it accurate.
+                  </p>
+               </div>
+            </div>
 
-				{/* SECTION 1 — What You Cook & Capacity */}
-				<Section
-					title="What you cook & capacity"
-					description="A short summary of your menu and how many guests you can serve."
-				>
-					<div className="grid gap-3 sm:grid-cols-2">
-						<Field label="What you cook" error={errors.whatYouCook?.message}>
-							<Textarea
-								placeholder="e.g. North African tagines, mezze platters…"
-								rows={2}
-								aria-invalid={!!errors.whatYouCook}
-								{...register("whatYouCook")}
-							/>
-						</Field>
-						<Field
-							label="For how many (guests)"
-							error={errors.capacity?.message}
-						>
-							<InputGroup>
-								<InputGroupInput
-									type="number"
-									inputMode="numeric"
-									min={1}
-									placeholder="e.g. 80"
-									aria-invalid={!!errors.capacity}
-									{...register("capacity")}
-								/>
-								<InputGroupAddon align="inline-start">
-									<UsersThreeIcon />
-								</InputGroupAddon>
-							</InputGroup>
-						</Field>
-					</div>
-				</Section>
+            <div className="space-y-8">
+               {/* City */}
+               <Field label="City" error={errors.city?.message}>
+                  <InputGroup>
+                     <InputGroupInput
+                        placeholder="Beirut"
+                        autoComplete="address-level2"
+                        aria-invalid={!!errors.city}
+                        {...register("city")}
+                     />
+                  </InputGroup>
+               </Field>
 
-				{/* SECTION 2 — Services */}
-				<Section
-					title="Services offered"
-					description="Pick the categories that match what you provide."
-					error={errors.services?.message}
-				>
-					<Controller
-						control={control}
-						name="services"
-						render={({ field }) => (
-							<div className="grid grid-cols-2 gap-3">
-								{serviceOptions.map(({ value, label, Icon }) => {
-									const checked = field.value.includes(value as ServiceValue)
-									return (
-										<label
-											key={value}
-											className="flex cursor-pointer items-center gap-3 rounded-md border border-input bg-input/20 px-3 py-3 transition-colors hover:bg-input/30 has-[[data-slot=checkbox]:checked]:border-primary has-[[data-slot=checkbox]:checked]:bg-primary/5 dark:bg-input/30"
-										>
-											<Checkbox
-												checked={checked}
-												onCheckedChange={(next) => {
-													const nextChecked = next === true
-													const current = field.value as ServiceValue[]
-													field.onChange(
-														nextChecked
-															? [...current, value as ServiceValue]
-															: current.filter((v) => v !== value),
-													)
-												}}
-											/>
-											<Icon className="size-4 text-muted-foreground" />
-											<span className="font-medium text-sm">{label}</span>
-										</label>
-									)
-								})}
-							</div>
-						)}
-					/>
-				</Section>
+               {/* Bio */}
+               <Field
+                  label="What you are known for"
+                  error={errors.bio?.message}
+                  hint="One or two lines. A host who has never heard of you reads this first."
+               >
+                  <Textarea
+                     placeholder="Home-style Lebanese cooking for family gatherings and iftars."
+                     rows={3}
+                     aria-invalid={!!errors.bio}
+                     {...register("bio")}
+                  />
+               </Field>
 
-				{/* SECTION 3 — Location & Reputation */}
-				<Section
-					title="Location & reputation"
-					description="Where you operate and the kind of orders you accept."
-				>
-					<div className="grid gap-3 sm:grid-cols-2">
-						<Field label="City" error={errors.city?.message}>
-							<InputGroup>
-								<InputGroupInput
-									placeholder="e.g. Casablanca"
-									autoComplete="address-level2"
-									aria-invalid={!!errors.city}
-									{...register("city")}
-								/>
-								<InputGroupAddon align="inline-start">
-									<MapPinIcon />
-								</InputGroupAddon>
-							</InputGroup>
-						</Field>
-						<Field
-							label="What you are known for"
-							error={errors.knownFor?.message}
-						>
-							<InputGroup>
-								<InputGroupInput
-									placeholder="e.g. family-style feasts"
-									aria-invalid={!!errors.knownFor}
-									{...register("knownFor")}
-								/>
-								<InputGroupAddon align="inline-start">
-									<StarIcon />
-								</InputGroupAddon>
-							</InputGroup>
-						</Field>
-					</div>
-					<div className="grid gap-3 sm:grid-cols-2">
-						<Field
-							label="Smallest order (guests)"
-							error={errors.smallestOrder?.message}
-						>
-							<InputGroup>
-								<InputGroupInput
-									type="number"
-									inputMode="numeric"
-									min={1}
-									placeholder="e.g. 10"
-									aria-invalid={!!errors.smallestOrder}
-									{...register("smallestOrder")}
-								/>
-								<InputGroupAddon align="inline-start">
-									<CityIcon />
-								</InputGroupAddon>
-							</InputGroup>
-						</Field>
-						<Field
-							label="Largest order (guests)"
-							error={errors.largestOrder?.message}
-						>
-							<InputGroup>
-								<InputGroupInput
-									type="number"
-									inputMode="numeric"
-									min={1}
-									placeholder="e.g. 200"
-									aria-invalid={!!errors.largestOrder}
-									{...register("largestOrder")}
-								/>
-								<InputGroupAddon align="inline-start">
-									<CityIcon />
-								</InputGroupAddon>
-							</InputGroup>
-						</Field>
-					</div>
-				</Section>
+               {/* Services toggle group */}
+               <Controller
+                  control={control}
+                  name="services"
+                  render={({ field }) => (
+                     <Field
+                        label="What you provide"
+                        error={errors.services?.message}
+                     >
+                        <div className="grid grid-cols-3 gap-2">
+                           {serviceOptions.map((service) => {
+                              const isSelected = field.value.includes(service)
+                              return (
+                                 <Button
+                                    key={service}
+                                    variant={isSelected ? "default" : "outline"}
+                                    size="sm"
+                                    onClick={() => {
+                                       const next = isSelected
+                                          ? field.value.filter(
+                                               (s) => s !== service
+                                            )
+                                          : [...field.value, service]
+                                       field.onChange(next)
+                                    }}
+                                 >
+                                    {service}
+                                 </Button>
+                              )
+                           })}
+                        </div>
+                     </Field>
+                  )}
+               />
 
-				{/* SECTION 4 — Availability */}
-				<Section
-					title="Availability & notice"
-					description="Set the lead time you need to accept a booking."
-					error={errors.notice?.message}
-				>
-					<Controller
-						control={control}
-						name="notice"
-						render={({ field }) => (
-							<RadioGroup
-								value={field.value}
-								onValueChange={(v) =>
-									field.onChange(v as FormInput["notice"])
-								}
-								className="gap-2"
-							>
-								<RadioOption
-									value="any"
-									title="Any date, including today"
-									description="I'm flexible and can handle last-minute orders."
-									checked={field.value === "any"}
-								/>
-								<RadioOption
-									value="48h"
-									title="At least 48 hours"
-									description="I need two days to prep ingredients and plating."
-									checked={field.value === "48h"}
-								/>
-							</RadioGroup>
-						)}
-					/>
-				</Section>
+               {/* Order range */}
+               <Controller
+                  control={control}
+                  name="orderRange"
+                  render={({ field }) => {
+                     const [min, max] = field.value ?? [0, 0]
+                     return (
+                        <Field
+                           label="Orders you can take"
+                           error={errors.orderRange?.message}
+                           hint="Occasions outside this range will not be offered to you."
+                        >
+                           <div className="flex items-center justify-between text-xs">
+                              <span className="font-medium text-foreground">
+                                 {min}{" "}
+                                 <span className="text-muted-foreground">
+                                    guests min
+                                 </span>
+                              </span>
+                              <span className="font-medium text-foreground">
+                                 {max}{" "}
+                                 <span className="text-muted-foreground">
+                                    guests max
+                                 </span>
+                              </span>
+                           </div>
+                           <Slider
+                              min={0}
+                              max={500}
+                              step={5}
+                              value={field.value}
+                              onValueChange={(v) => field.onChange(v)}
+                              aria-label="Order range"
+                           />
+                           <div className="flex justify-between text-[0.625rem] text-muted-foreground/70">
+                              <span>0</span>
+                              <span>500</span>
+                           </div>
+                        </Field>
+                     )
+                  }}
+               />
 
-				<div className="flex flex-col-reverse gap-2 sm:flex-row sm:justify-end">
-					<Button
-						variant="outline"
-						render={<Link href="/onboarding" />}
-						nativeButton={false}
-					>
-						Back
-					</Button>
-					<Button
-						type="submit"
-						size="lg"
-						disabled={isSubmitting}
-						className="sm:min-w-48"
-					>
-						Submit Application
-					</Button>
-				</div>
-			</form>
-		</OnboardingShell>
-	)
-}
+               {/* Notice period */}
+               <Controller
+                  control={control}
+                  name="notice"
+                  render={({ field }) => (
+                     <Field
+                        label="How much notice you need"
+                        error={errors.notice?.message}
+                        hint="You can change this at any time from Availability."
+                     >
+                        <ToggleGroup
+                           multiple={false}
+                           value={field.value ? [field.value] : []}
+                           onValueChange={(values) =>
+                              field.onChange(values[0] ?? undefined)
+                           }
+                           spacing={0}
+                           variant="outline"
+                           className="w-full"
+                        >
+                           {noticeOptions.map((option) => (
+                              <ToggleGroupItem
+                                 key={option.value}
+                                 value={option.value}
+                                 className={cn(
+                                    "h-10 flex-1 rounded-full border border-input text-sm font-medium",
+                                    "data-[state=on]:border-foreground data-[state=on]:bg-foreground data-[state=on]:text-background",
+                                    "first:rounded-l-full last:rounded-r-full",
+                                 )}
+                              >
+                                 {option.label}
+                              </ToggleGroupItem>
+                           ))}
+                        </ToggleGroup>
+                     </Field>
+                  )}
+               />
+            </div>
 
-function Section({
-	title,
-	description,
-	error,
-	children,
-}: {
-	title: string
-	description?: string
-	error?: string
-	children: React.ReactNode
-}) {
-	return (
-		<section className="space-y-3">
-			<header className="space-y-0.5">
-				<h2 className="font-semibold text-muted-foreground text-xs uppercase tracking-wider">
-					{title}
-				</h2>
-				{description ? (
-					<p className="text-muted-foreground text-xs">{description}</p>
-				) : null}
-			</header>
-			{children}
-			{error ? (
-				<p role="alert" className="text-destructive text-xs">
-					{error}
-				</p>
-			) : null}
-		</section>
-	)
+            <Button
+               className="w-full rounded-full"
+               size="lg"
+               type="submit"
+               disabled={isSubmitting}
+            >
+               Submit application
+            </Button>
+
+            <p className="text-center text-sm">
+               <Button
+                  variant="link"
+                  className="h-auto p-0 text-sm font-semibold text-foreground"
+                  render={<Link href="/onboarding" />}
+                  nativeButton={false}
+               >
+                  Back to your account details
+               </Button>
+            </p>
+         </form>
+      </OnboardingShell>
+   )
 }
 
 function Field({
-	label,
-	error,
-	children,
+   label,
+   error,
+   hint,
+   children,
 }: {
-	label: string
-	error?: string
-	children: React.ReactNode
+   label: string
+   error?: string
+   hint?: string
+   children: React.ReactNode
 }) {
-	return (
-		<div className="space-y-1.5">
-			<label className="font-medium text-foreground text-xs leading-none">
-				{label}
-			</label>
-			{children}
-			{error ? (
-				<p role="alert" className="text-destructive text-xs">
-					{error}
-				</p>
-			) : null}
-		</div>
-	)
-}
-
-function RadioOption({
-	value,
-	title,
-	description,
-	checked,
-}: {
-	value: string
-	title: string
-	description: string
-	checked: boolean
-}) {
-	return (
-		<label
-			className={`flex cursor-pointer items-start gap-3 rounded-md border p-3 transition-colors hover:bg-input/30 has-[[data-slot=radio-group-item]:checked]:border-primary has-[[data-slot=radio-group-item]:checked]:bg-primary/5 ${
-				checked ? "border-primary bg-primary/5" : "border-input bg-input/20 dark:bg-input/30"
-			}`}
-		>
-			<RadioGroupItem value={value} />
-			<div className="space-y-0.5">
-				<p className="font-medium text-sm">{title}</p>
-				<p className="text-muted-foreground text-xs">{description}</p>
-			</div>
-		</label>
-	)
+   return (
+      <div className="space-y-3">
+         <Label>{label}</Label>
+         {children}
+         {error ? (
+            <p role="alert" className="text-xs text-destructive">
+               {error}
+            </p>
+         ) : hint ? (
+            <p className="text-xs text-muted-foreground">{hint}</p>
+         ) : null}
+      </div>
+   )
 }

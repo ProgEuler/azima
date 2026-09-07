@@ -5,8 +5,8 @@ export type LogoSize = "sm" | "md" | "lg";
 
 const sizeMap: Record<LogoSize, { badge: number; text: string }> = {
   sm: { badge: 24, text: "text-base" },
-  md: { badge: 32, text: "text-xl" },
-  lg: { badge: 40, text: "text-2xl" },
+  md: { badge: 56, text: "text-xl" },
+  lg: { badge: 86, text: "text-2xl" },
 };
 
 const HAS_HEIGHT_CLASS = /\bh-\d|\bsize-\d/;
