@@ -1,4 +1,5 @@
 import { Geist, Geist_Mono, Inter } from "next/font/google"
+import NextTopLoader from "nextjs-toploader"
 
 import "./globals.css"
 import { ThemeProvider } from "@/components/theme-provider"
@@ -32,6 +33,12 @@ export default function RootLayout({
       className={cn("antialiased", fontMono.variable, "font-sans", inter.variable)}
     >
       <body>
+        <NextTopLoader
+          color="#fff"
+          height={6}
+          showSpinner={false}
+          shadow="0 0 8px oklch(0.852 0.199 91.936 / 0.5)"
+        />
         <ThemeProvider>
           <TooltipProvider>{children}</TooltipProvider>
         </ThemeProvider>

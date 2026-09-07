@@ -19,7 +19,7 @@ export const navGroups: SidebarNavGroup[] = [
 		items: [
 			{
 				title: "Overview",
-				path: "#/overview",
+				path: "/overview",
 				icon: (
 					<SquaresFourIcon
 					/>
@@ -33,7 +33,7 @@ export const navGroups: SidebarNavGroup[] = [
 		items: [
 			{
 				title: "Queue",
-				path: "#/queue",
+				path: "/queue",
 				icon: (
 					<ListChecksIcon
 					/>

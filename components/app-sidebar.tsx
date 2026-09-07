@@ -16,6 +16,7 @@ import {
    type SidebarNavItem,
 } from "@/components/app-shared"
 import Image from "next/image"
+import Link from "next/link"
 
 export function AppSidebar({
    navGroups = defaultNavGroups,
@@ -47,7 +48,7 @@ export function AppSidebar({
                         className="text-muted-foreground"
                         isActive={item.isActive}
                         size="sm"
-                        render={<a href={item.path} />}
+                        render={<Link href={item.path ?? "#"} />}
                      >
                         {item.icon}
                         <span>{item.title}</span>
