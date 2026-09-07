@@ -64,13 +64,31 @@ const adminFooterNavLinks: SidebarNavItem[] = [
 	},
 ];
 
+import { usePathname } from "next/navigation";
+
 export default function AdminLayout({
 	children,
 }: {
 	children: React.ReactNode;
 }) {
+	const pathname = usePathname();
+
+	const navGroups = adminNavGroups.map((group) => ({
+		...group,
+		items: group.items.map((item) => {
+			const isActive =
+				item.path === "/admin"
+					? pathname === "/admin"
+					: !!item.path && pathname.startsWith(item.path);
+			return {
+				...item,
+				isActive,
+			};
+		}),
+	}));
+
 	return (
-		<AppShell navGroups={adminNavGroups} footerNavLinks={adminFooterNavLinks}>
+		<AppShell navGroups={navGroups} footerNavLinks={adminFooterNavLinks}>
 			{children}
 		</AppShell>
 	);

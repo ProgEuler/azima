@@ -5,13 +5,35 @@ import { Button } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
 import { AppBreadcrumbs } from "@/components/app-breadcrumbs";
 import { CustomSidebarTrigger } from "@/components/custom-sidebar-trigger";
-import { navLinks } from "@/components/app-shared";
+import { usePathname } from "next/navigation";
 import { NavUser } from "@/components/nav-user";
-import { PaperPlaneTiltIcon, BellIcon } from "@phosphor-icons/react";
-
-const activeItem = navLinks.find((item) => item.isActive);
+import {
+	SquaresFourIcon,
+	UsersFourIcon,
+	StethoscopeIcon,
+	ReceiptIcon,
+	BellRingingIcon,
+	UserCircleIcon,
+	PaperPlaneTiltIcon,
+	BellIcon,
+} from "@phosphor-icons/react";
 
 export function AppHeader() {
+	const pathname = usePathname();
+
+	let activeItem = { title: "Overview", icon: <SquaresFourIcon /> };
+
+	if (pathname.startsWith("/admin/users")) {
+		activeItem = { title: "Users", icon: <UsersFourIcon /> };
+	} else if (pathname.startsWith("/admin/providers")) {
+		activeItem = { title: "Providers", icon: <StethoscopeIcon /> };
+	} else if (pathname.startsWith("/admin/orders")) {
+		activeItem = { title: "Orders", icon: <ReceiptIcon /> };
+	} else if (pathname.startsWith("/admin/notification-delivery")) {
+		activeItem = { title: "Notification Delivery", icon: <BellRingingIcon /> };
+	} else if (pathname.startsWith("/admin/account")) {
+		activeItem = { title: "Account", icon: <UserCircleIcon /> };
+	}
 	return (
 		<header
 			className={cn(

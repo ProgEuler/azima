@@ -265,3 +265,437 @@ export const activityFeed: ActivityItem[] = [
   { id: "ac_09", text: "12 new orders placed in the last 24 h",      time: "1 d ago",    iconKey: "order" },
   { id: "ac_10", text: "Weekly billing summary generated",           time: "2 d ago",    iconKey: "billing" },
 ];
+
+// Admin Catering Platform Overview Data
+export type FinancialMetric = {
+  id: string;
+  title: string;
+  amount: string;
+  subtext: string;
+  iconType: "cash" | "card" | "warning" | "calendar";
+  isAlert?: boolean;
+};
+
+export const adminPlatformFinances: FinancialMetric[] = [
+  {
+    id: "cash_collect",
+    title: "Cash to collect",
+    amount: "$2,228",
+    subtext: "3 accepted orders · handed over on the day",
+    iconType: "cash",
+  },
+  {
+    id: "already_paid",
+    title: "Already paid online",
+    amount: "$1,584",
+    subtext: "2 orders · card or Apple Pay",
+    iconType: "card",
+  },
+  {
+    id: "cash_owed",
+    title: "Delivered, cash owed",
+    amount: "$180",
+    subtext: "1 order not settled yet",
+    iconType: "warning",
+    isAlert: true,
+  },
+  {
+    id: "booked_month",
+    title: "Booked this month",
+    amount: "$522",
+    subtext: "Last month $0",
+    iconType: "calendar",
+  },
+];
+
+export type OrderProgressStage = {
+  id: string;
+  label: string;
+  count: number;
+  color: string;
+  barColor: string;
+};
+
+export const adminOrderStages: OrderProgressStage[] = [
+  { id: "awaiting_reply", label: "Awaiting reply", count: 4, color: "#EAB308", barColor: "bg-[#EAB308]" },
+  { id: "reconfirming", label: "Re-confirming", count: 0, color: "#C7C2BB", barColor: "bg-[#C7C2BB]" },
+  { id: "awaiting_call", label: "Awaiting call", count: 1, color: "#E59880", barColor: "bg-[#E59880]" },
+  { id: "contacted", label: "Contacted", count: 1, color: "#C05621", barColor: "bg-[#C05621]" },
+  { id: "preparing", label: "Preparing", count: 1, color: "#5C2417", barColor: "bg-[#5C2417]" },
+  { id: "on_the_way", label: "On the way", count: 1, color: "#2F7455", barColor: "bg-[#2F7455]" },
+];
+
+export type OrderInProgress = {
+  id: string;
+  orderCode: string;
+  customerName: string;
+  catererName: string;
+  eventName: string;
+  guestCount: number;
+  amount: string;
+  stageName: string;
+  stageDuration: string;
+  isOverdue?: boolean;
+};
+
+export const adminOrdersInProgress: OrderInProgress[] = [
+  {
+    id: "ord_p1",
+    orderCode: "AZ-2418",
+    customerName: "Omar Naimneh",
+    catererName: "Socart Catering",
+    eventName: "Iftar Gathering",
+    guestCount: 35,
+    amount: "$560",
+    stageName: "Contacted",
+    stageDuration: "40h in this stage",
+  },
+  {
+    id: "ord_p2",
+    orderCode: "AZ-2377",
+    customerName: "Omar Naimneh",
+    catererName: "Socart Catering",
+    eventName: "Weekend Dinner",
+    guestCount: 60,
+    amount: "$1,470",
+    stageName: "Awaiting call",
+    stageDuration: "7h in this stage",
+  },
+  {
+    id: "ord_p3",
+    orderCode: "AZ-2444",
+    customerName: "Layla Karam",
+    catererName: "Yummy Catering",
+    eventName: "Corporate Breakfast",
+    guestCount: 45,
+    amount: "$315",
+    stageName: "Awaiting reply",
+    stageDuration: "6h in this stage",
+    isOverdue: true,
+  },
+  {
+    id: "ord_p4",
+    orderCode: "AZ-2402",
+    customerName: "Omar Naimneh",
+    catererName: "Sweet House",
+    eventName: "Team Lunch",
+    guestCount: 18,
+    amount: "$144",
+    stageName: "Preparing",
+    stageDuration: "3h in this stage",
+  },
+  {
+    id: "ord_p5",
+    orderCode: "AZ-2455",
+    customerName: "Layla Karam",
+    catererName: "Yummy Catering",
+    eventName: "Sunday Family Lunch",
+    guestCount: 22,
+    amount: "$242",
+    stageName: "Awaiting reply",
+    stageDuration: "2h in this stage",
+  },
+];
+
+export type UpcomingEvent = {
+  id: string;
+  date: string;
+  time: string;
+  eventName: string;
+  customerName: string;
+  details: string;
+  amount: string;
+  statusBadge: {
+    label: string;
+    variant: "covered" | "awaiting" | "nofood";
+  };
+  imageSrc: string;
+};
+
+export const adminUpcomingSevenDays: UpcomingEvent[] = [
+  {
+    id: "ev_1",
+    date: "30 Aug",
+    time: "1:00 PM",
+    eventName: "Team Lunch",
+    customerName: "Omar Naimneh",
+    details: "lunch · 18guests · 2 caterers",
+    amount: "$342",
+    statusBadge: {
+      label: "Covered",
+      variant: "covered",
+    },
+    imageSrc: "/images/overview/team-lunch.jpg",
+  },
+  {
+    id: "ev_2",
+    date: "1 Sep",
+    time: "9:00 AM",
+    eventName: "Corporate Breakfast",
+    customerName: "Layla Karam",
+    details: "breakfast · 45guests · Yummy Catering",
+    amount: "$315",
+    statusBadge: {
+      label: "Awaiting caterer",
+      variant: "awaiting",
+    },
+    imageSrc: "/images/overview/corporate-breakfast.jpg",
+  },
+  {
+    id: "ev_3",
+    date: "3 Sep",
+    time: "8:30 PM",
+    eventName: "Layla's Birthday",
+    customerName: "Layla Karam",
+    details: "dinner · 24guests · No caterer yet",
+    amount: "—",
+    statusBadge: {
+      label: "No food ordered",
+      variant: "nofood",
+    },
+    imageSrc: "/images/overview/birthday-dinner.jpg",
+  },
+];
+
+export type UserOccasionItem = {
+  id: string;
+  title: string;
+  date: string;
+  mealType: string;
+  guests: number;
+  amount: string;
+  status: "Rejected" | "Contact confirmed" | "Preparing" | "Covered";
+  imageSrc: string;
+};
+
+export type AdminHostUser = {
+  id: string;
+  name: string;
+  email: string;
+  phone: string;
+  occasions: number;
+  booked: string;
+  status: "active" | "suspended";
+  avatarImage?: string;
+  avatarInitials: string;
+  hostSince: string;
+  address: string;
+  ordersCount: number;
+  cancelledOrders: number;
+  cancellationRate: string;
+  liveOccasions: number;
+  occasionsList: UserOccasionItem[];
+};
+
+export const adminHostUsers: AdminHostUser[] = [
+  {
+    id: "omar-naimneh",
+    name: "Omar Naimneh",
+    email: "omar@azima.app",
+    phone: "+961 3 112 440",
+    occasions: 4,
+    booked: "$4,412",
+    status: "active",
+    avatarInitials: "ON",
+    hostSince: "31 Jul 2026",
+    address: "Mar Mikhael, Beirut",
+    ordersCount: 8,
+    cancelledOrders: 0,
+    cancellationRate: "0%",
+    liveOccasions: 6,
+    occasionsList: [
+      {
+        id: "occ_1",
+        title: "Weekend Dinner",
+        date: "20 Sep 2026",
+        mealType: "Dinner",
+        guests: 60,
+        amount: "$840",
+        status: "Rejected",
+        imageSrc: "/images/overview/birthday-dinner.jpg",
+      },
+      {
+        id: "occ_2",
+        title: "Iftar Gathering",
+        date: "8 Sep 2026",
+        mealType: "Iftar",
+        guests: 35,
+        amount: "$560",
+        status: "Contact confirmed",
+        imageSrc: "/images/overview/birthday-dinner.jpg",
+      },
+      {
+        id: "occ_3",
+        title: "Team Lunch",
+        date: "31 Aug 2026",
+        mealType: "Lunch",
+        guests: 18,
+        amount: "$144",
+        status: "Preparing",
+        imageSrc: "/images/overview/team-lunch.jpg",
+      },
+    ],
+  },
+  {
+    id: "layla-karam",
+    name: "Layla Karam",
+    email: "layla.karam@mail.com",
+    phone: "+961 3 887 902",
+    occasions: 3,
+    booked: "$557",
+    status: "active",
+    avatarImage: "/images/avatars/layla.jpg",
+    avatarInitials: "LK",
+    hostSince: "12 May 2026",
+    address: "Achrafieh, Beirut",
+    ordersCount: 5,
+    cancelledOrders: 0,
+    cancellationRate: "0%",
+    liveOccasions: 2,
+    occasionsList: [
+      {
+        id: "occ_l1",
+        title: "Corporate Breakfast",
+        date: "1 Sep 2026",
+        mealType: "Breakfast",
+        guests: 45,
+        amount: "$315",
+        status: "Contact confirmed",
+        imageSrc: "/images/overview/corporate-breakfast.jpg",
+      },
+      {
+        id: "occ_l2",
+        title: "Sunday Family Lunch",
+        date: "24 Aug 2026",
+        mealType: "Lunch",
+        guests: 22,
+        amount: "$242",
+        status: "Covered",
+        imageSrc: "/images/overview/team-lunch.jpg",
+      },
+    ],
+  },
+  {
+    id: "rami-haddad",
+    name: "Rami Haddad",
+    email: "rami.h@mail.com",
+    phone: "+961 3 220 114",
+    occasions: 0,
+    booked: "—",
+    status: "suspended",
+    avatarImage: "/images/avatars/rami.jpg",
+    avatarInitials: "RH",
+    hostSince: "18 Aug 2025",
+    address: "Hamra, Beirut",
+    ordersCount: 1,
+    cancelledOrders: 1,
+    cancellationRate: "100%",
+    liveOccasions: 0,
+    occasionsList: [],
+  },
+  {
+    id: "nour-saab",
+    name: "Nour Saab",
+    email: "nour.saab@mail.com",
+    phone: "+961 76 119 220",
+    occasions: 0,
+    booked: "—",
+    status: "active",
+    avatarInitials: "NS",
+    hostSince: "05 Jun 2026",
+    address: "Badaro, Beirut",
+    ordersCount: 0,
+    cancelledOrders: 0,
+    cancellationRate: "0%",
+    liveOccasions: 0,
+    occasionsList: [],
+  },
+  {
+    id: "dana-khoury",
+    name: "Dana Khoury",
+    email: "dana.khoury@mail.com",
+    phone: "+961 3 909 112",
+    occasions: 0,
+    booked: "—",
+    status: "active",
+    avatarImage: "/images/avatars/dana.jpg",
+    avatarInitials: "DK",
+    hostSince: "19 Jul 2026",
+    address: "Dbayeh, Mount Lebanon",
+    ordersCount: 0,
+    cancelledOrders: 0,
+    cancellationRate: "0%",
+    liveOccasions: 0,
+    occasionsList: [],
+  },
+  {
+    id: "fadi-nassar",
+    name: "Fadi Nassar",
+    email: "fadi.nassar@mail.com",
+    phone: "+961 71 662 004",
+    occasions: 0,
+    booked: "—",
+    status: "active",
+    avatarImage: "/images/avatars/fadi.jpg",
+    avatarInitials: "FN",
+    hostSince: "28 Jun 2026",
+    address: "Verdun, Beirut",
+    ordersCount: 0,
+    cancelledOrders: 0,
+    cancellationRate: "0%",
+    liveOccasions: 0,
+    occasionsList: [],
+  },
+  {
+    id: "maya-fares",
+    name: "Maya Fares",
+    email: "maya.fares@mail.com",
+    phone: "+961 70 331 208",
+    occasions: 0,
+    booked: "—",
+    status: "active",
+    avatarImage: "/images/avatars/maya.jpg",
+    avatarInitials: "MF",
+    hostSince: "02 Aug 2026",
+    address: "Mansourieh, Mount Lebanon",
+    ordersCount: 0,
+    cancelledOrders: 0,
+    cancellationRate: "0%",
+    liveOccasions: 0,
+    occasionsList: [],
+  },
+  {
+    id: "karim-abou-zeid",
+    name: "Karim Abou Zeid",
+    email: "karim.az@mail.com",
+    phone: "+961 3 774 615",
+    occasions: 0,
+    booked: "—",
+    status: "active",
+    avatarInitials: "KA",
+    hostSince: "14 Jul 2026",
+    address: "Jounieh, Mount Lebanon",
+    ordersCount: 0,
+    cancelledOrders: 0,
+    cancellationRate: "0%",
+    liveOccasions: 0,
+    occasionsList: [],
+  },
+  {
+    id: "hiba-mansour",
+    name: "Hiba Mansour",
+    email: "hiba.mansour@mail.com",
+    phone: "+961 76 402 883",
+    occasions: 0,
+    booked: "—",
+    status: "suspended",
+    avatarInitials: "HM",
+    hostSince: "22 Jun 2026",
+    address: "Tripoli, North Lebanon",
+    ordersCount: 0,
+    cancelledOrders: 0,
+    cancellationRate: "0%",
+    liveOccasions: 0,
+    occasionsList: [],
+  },
+];
