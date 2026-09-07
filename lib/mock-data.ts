@@ -699,3 +699,318 @@ export const adminHostUsers: AdminHostUser[] = [
     occasionsList: [],
   },
 ];
+
+export type PendingApprovalProvider = {
+  id: string;
+  name: string;
+  category: string;
+  city: string;
+  phone: string;
+  menuItemsToReview: number;
+  imageSrc: string;
+};
+
+export const adminPendingApprovals: PendingApprovalProvider[] = [
+  {
+    id: "dessert-corner",
+    name: "Dessert Corner",
+    category: "Sweets",
+    city: "Saida",
+    phone: "+961 7 118 442",
+    menuItemsToReview: 4,
+    imageSrc: "/images/providers/dessert-corner.jpg",
+  },
+];
+
+export type CatererRequestStatus = {
+  label: string;
+  subtext: string;
+  color: "green" | "red";
+};
+
+export type CatererMenuItem = {
+  id: string;
+  name: string;
+  description: string;
+  price: string;
+  imageSrc: string;
+};
+
+export type CatererMenuCategory = {
+  title: string;
+  items: CatererMenuItem[];
+};
+
+export type CatererOrder = {
+  id: string;
+  code: string;
+  eventName: string;
+  date: string;
+  guests: number;
+  amount: string;
+  status: "Awaiting response" | "On the way" | "Delivered";
+  imageSrc: string;
+};
+
+export type CatererAccount = {
+  id: string;
+  name: string;
+  rating: number;
+  reviewsCount?: number;
+  category: string;
+  isSuspended?: boolean;
+  capacity: number;
+  requestStatus: CatererRequestStatus;
+  liveOrders: number;
+  deliveredOrders: number;
+  imageSrc: string;
+  ownerName?: string;
+  description?: string;
+  phone?: string;
+  email?: string;
+  city?: string;
+  acceptanceRate?: string;
+  acceptanceDecisions?: number;
+  menuItemsCount?: number;
+  priceRange?: string;
+  tradingTerms?: {
+    availabilityMode: string;
+    availabilityNote: string;
+    bookingLeadTime: string;
+    bookingLeadNote: string;
+    bookingsAccepted: string;
+    bookingsNote: string;
+    deliversTo: string;
+    deliveryFee: string;
+    hostCollection: string;
+    blackoutDates: string;
+  };
+  menuCategories?: CatererMenuCategory[];
+  ordersList?: CatererOrder[];
+};
+
+export const adminCatererProviders: CatererAccount[] = [
+  {
+    id: "socart-catering",
+    name: "Socart Catering",
+    rating: 4.8,
+    category: "Catering",
+    capacity: 20,
+    requestStatus: {
+      label: "Accepting requests",
+      subtext: "Books any date",
+      color: "green",
+    },
+    liveOrders: 2,
+    deliveredOrders: 1,
+    imageSrc: "/images/providers/socart.jpg",
+  },
+  {
+    id: "yummy-catering",
+    name: "Yummy Catering",
+    rating: 4.6,
+    reviewsCount: 98,
+    category: "Catering",
+    capacity: 10,
+    ownerName: "Hadi Nassar",
+    description: "Live grill stations and hot mains prepared on site, with a uniformed serving team.",
+    phone: "+961 3 991 204",
+    email: "kitchen@yummy.example",
+    city: "Beirut",
+    requestStatus: {
+      label: "Auto-accepting",
+      subtext: "Books any date",
+      color: "green",
+    },
+    liveOrders: 5,
+    deliveredOrders: 0,
+    acceptanceRate: "100%",
+    acceptanceDecisions: 1,
+    menuItemsCount: 8,
+    priceRange: "$2.50–$24 per guest",
+    imageSrc: "/images/providers/yummy.jpg",
+    tradingTerms: {
+      availabilityMode: "Auto-accepting",
+      availabilityNote: "They reply to each request themselves.",
+      bookingLeadTime: "Books any date",
+      bookingLeadNote: "Hosts can book them for any date, including tomorrow.",
+      bookingsAccepted: "10–300 guests",
+      bookingsNote: "Hosts outside this range cannot select them.",
+      deliversTo: "Hamra · Verdun · Ras Beirut · Manara",
+      deliveryFee: "$15",
+      hostCollection: "Hamra Street 118, Beirut",
+      blackoutDates: "5 Sep 2026 - 12 Sep 2026",
+    },
+    menuCategories: [
+      {
+        title: "Mezze & starters",
+        items: [
+          {
+            id: "m_1",
+            name: "Hummus & moutabal spread",
+            description: "Both dips with olive oil, sumac and fresh bread",
+            price: "$4.50",
+            imageSrc: "/images/providers/hummus.jpg",
+          },
+        ],
+      },
+      {
+        title: "Mains",
+        items: [
+          {
+            id: "m_2",
+            name: "Mixed grill station",
+            description: "Taouk, kafta and lamb grilled to order in front of guests",
+            price: "$18",
+            imageSrc: "/images/providers/mixed-grill.jpg",
+          },
+          {
+            id: "m_3",
+            name: "Shish taouk platter",
+            description: "Marinated chicken skewers with garlic sauce and pita",
+            price: "$12",
+            imageSrc: "/images/providers/shish-taouk.jpg",
+          },
+          {
+            id: "m_4",
+            name: "Lunch set menu",
+            description: "One grill, one side and a salad, plated per guest",
+            price: "$11",
+            imageSrc: "/images/providers/lunch-set.jpg",
+          },
+          {
+            id: "m_5",
+            name: "Kafta & arayes station",
+            description: "Minced lamb kafta and crisp arayes bread, made live",
+            price: "$13",
+            imageSrc: "/images/providers/kafta.jpg",
+          },
+          {
+            id: "m_6",
+            name: "Charcoal lamb chops",
+            description: "Trimmed chops over charcoal, finished with sumac",
+            price: "$24",
+            imageSrc: "/images/providers/lamb-chops.jpg",
+          },
+        ],
+      },
+      {
+        title: "Sides & salads",
+        items: [
+          {
+            id: "m_7",
+            name: "Grilled vegetable spread",
+            description: "Charred aubergine, peppers and courgette in olive oil",
+            price: "$6",
+            imageSrc: "/images/providers/vegetables.jpg",
+          },
+          {
+            id: "m_8",
+            name: "Saj bread & pickles",
+            description: "Thin saj baked on site, with pickles and olives",
+            price: "$2.50",
+            imageSrc: "/images/providers/saj-bread.jpg",
+          },
+        ],
+      },
+    ],
+    ordersList: [
+      {
+        id: "ord_y1",
+        code: "AZ-2431",
+        eventName: "Iftar Gathering",
+        date: "8 Sep 2026",
+        guests: 35,
+        amount: "$420",
+        status: "Awaiting response",
+        imageSrc: "/images/overview/birthday-dinner.jpg",
+      },
+      {
+        id: "ord_y2",
+        code: "AZ-2356",
+        eventName: "Team Lunch",
+        date: "31 Aug 2026",
+        guests: 18,
+        amount: "$198",
+        status: "On the way",
+        imageSrc: "/images/overview/team-lunch.jpg",
+      },
+      {
+        id: "ord_y3",
+        code: "AZ-2444",
+        eventName: "Corporate Breakfast",
+        date: "2 Sep 2026",
+        guests: 45,
+        amount: "$315",
+        status: "Awaiting response",
+        imageSrc: "/images/overview/corporate-breakfast.jpg",
+      },
+      {
+        id: "ord_y4",
+        code: "AZ-2451",
+        eventName: "Weekend Dinner",
+        date: "20 Sep 2026",
+        guests: 60,
+        amount: "$1,440",
+        status: "Awaiting response",
+        imageSrc: "/images/overview/birthday-dinner.jpg",
+      },
+      {
+        id: "ord_y5",
+        code: "AZ-2455",
+        eventName: "Sunday Family Lunch",
+        date: "11 Sep 2026",
+        guests: 22,
+        amount: "$242",
+        status: "Awaiting response",
+        imageSrc: "/images/overview/team-lunch.jpg",
+      },
+    ],
+  },
+  {
+    id: "fresh-juice-bar",
+    name: "Fresh Juice Bar",
+    rating: 4.5,
+    category: "Drinks",
+    isSuspended: true,
+    capacity: 10,
+    requestStatus: {
+      label: "Stopped by azima",
+      subtext: "Hidden from hosts",
+      color: "red",
+    },
+    liveOrders: 0,
+    deliveredOrders: 0,
+    imageSrc: "/images/providers/juice-bar.jpg",
+  },
+  {
+    id: "sweet-house",
+    name: "Sweet House",
+    rating: 4.7,
+    category: "Sweets",
+    capacity: 15,
+    requestStatus: {
+      label: "Accepting requests",
+      subtext: "Needs 48 hours notice",
+      color: "green",
+    },
+    liveOrders: 1,
+    deliveredOrders: 0,
+    imageSrc: "/images/providers/sweet-house.jpg",
+  },
+  {
+    id: "golden-buffet",
+    name: "Golden Buffet",
+    rating: 4.4,
+    category: "Catering",
+    capacity: 100,
+    requestStatus: {
+      label: "Not available",
+      subtext: "Needs 48 hours notice",
+      color: "red",
+    },
+    liveOrders: 0,
+    deliveredOrders: 0,
+    imageSrc: "/images/providers/golden-buffet.jpg",
+  },
+];
