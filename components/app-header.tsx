@@ -7,6 +7,8 @@ import { AppBreadcrumbs } from "@/components/app-breadcrumbs";
 import { CustomSidebarTrigger } from "@/components/custom-sidebar-trigger";
 import { usePathname } from "next/navigation";
 import { NavUser } from "@/components/nav-user";
+import { Notifications } from "@/components/notifications";
+import { ThemeToggle } from "@/components/theme-toggle";
 import {
 	SquaresFourIcon,
 	UsersFourIcon,
@@ -14,7 +16,6 @@ import {
 	ReceiptIcon,
 	BellRingingIcon,
 	PaperPlaneTiltIcon,
-	BellIcon,
 } from "@phosphor-icons/react";
 
 export function AppHeader() {
@@ -50,10 +51,8 @@ export function AppHeader() {
 					<PaperPlaneTiltIcon
 					/>
 				</Button>
-				<Button aria-label="Notifications" size="icon-sm" variant="outline">
-					<BellIcon
-					/>
-				</Button>
+				<Notifications />
+				<ThemeToggle />
 				<Separator
 					className="h-4 data-[orientation=vertical]:self-center"
 					orientation="vertical"
