@@ -2,15 +2,13 @@
 
 import {
 	BellRingingIcon,
-	LifebuoyIcon,
-	PulseIcon,
 	ReceiptIcon,
 	SquaresFourIcon,
 	StethoscopeIcon,
 	UsersFourIcon,
 } from "@phosphor-icons/react";
 import { AppShell } from "@/components/app-shell";
-import type { SidebarNavGroup, SidebarNavItem } from "@/components/app-shared";
+import type { SidebarNavGroup } from "@/components/app-shared";
 
 const adminNavGroups: SidebarNavGroup[] = [
 	{
@@ -45,19 +43,6 @@ const adminNavGroups: SidebarNavGroup[] = [
 	},
 ];
 
-const adminFooterNavLinks: SidebarNavItem[] = [
-	{
-		title: "Help Center",
-		path: "/admin/help",
-		icon: <LifebuoyIcon />,
-	},
-	{
-		title: "System status",
-		path: "/admin/status",
-		icon: <PulseIcon />,
-	},
-];
-
 import { usePathname } from "next/navigation";
 
 export default function AdminLayout({
@@ -82,7 +67,7 @@ export default function AdminLayout({
 	}));
 
 	return (
-		<AppShell navGroups={navGroups} footerNavLinks={adminFooterNavLinks}>
+		<AppShell navGroups={navGroups}>
 			{children}
 		</AppShell>
 	);

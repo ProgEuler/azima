@@ -45,10 +45,12 @@ export function AppSidebar({
                {footerNavLinks.map((item) => (
                   <SidebarMenuItem key={item.title}>
                      <SidebarMenuButton
-                        className="text-muted-foreground"
+                        className="text-red-800"
                         isActive={item.isActive}
                         size="sm"
-                        render={<Link href={item.path ?? "#"} />}
+                        tooltip={item.title}
+                        onClick={item.onClick}
+                        render={item.path ? <Link href={item.path} /> : undefined}
                      >
                         {item.icon}
                         <span>{item.title}</span>

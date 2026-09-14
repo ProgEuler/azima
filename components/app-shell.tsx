@@ -10,7 +10,7 @@ export function AppShell({
 }: {
 	children: React.ReactNode;
 	navGroups: SidebarNavGroup[];
-	footerNavLinks: SidebarNavItem[];
+	footerNavLinks?: SidebarNavItem[];
 }) {
 	return (
 		<div className="overflow-hidden">

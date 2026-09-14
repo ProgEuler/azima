@@ -5,13 +5,11 @@ import {
 	ChatCircleDotsIcon,
 	CurrencyDollarIcon,
 	HouseLineIcon,
-	LifebuoyIcon,
 	PackageIcon,
-	PulseIcon,
 	UserCircleIcon,
 } from "@phosphor-icons/react";
 import { AppShell } from "@/components/app-shell";
-import type { SidebarNavGroup, SidebarNavItem } from "@/components/app-shared";
+import type { SidebarNavGroup } from "@/components/app-shared";
 
 const providerNavGroups: SidebarNavGroup[] = [
 	{
@@ -51,26 +49,13 @@ const providerNavGroups: SidebarNavGroup[] = [
 	},
 ];
 
-const providerFooterNavLinks: SidebarNavItem[] = [
-	{
-		title: "Help Center",
-		path: "/provider/help",
-		icon: <LifebuoyIcon />,
-	},
-	{
-		title: "System status",
-		path: "/provider/status",
-		icon: <PulseIcon />,
-	},
-];
-
 export default function ProviderLayout({
 	children,
 }: {
 	children: React.ReactNode;
 }) {
 	return (
-		<AppShell navGroups={providerNavGroups} footerNavLinks={providerFooterNavLinks}>
+		<AppShell navGroups={providerNavGroups}>
 			{children}
 		</AppShell>
 	);

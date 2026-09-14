@@ -1,5 +1,5 @@
 import type { ReactNode } from "react";
-import { SquaresFourIcon, ListChecksIcon, ChartBarIcon, ChatIcon, UsersIcon, PlugIcon, GearIcon, QuestionIcon, PulseIcon } from "@phosphor-icons/react";
+import { SquaresFourIcon, ListChecksIcon, ChartBarIcon, ChatIcon, UsersIcon, PlugIcon, GearIcon, SignOutIcon } from "@phosphor-icons/react";
 
 export type SidebarNavItem = {
 	title: string;
@@ -7,6 +7,7 @@ export type SidebarNavItem = {
 	icon?: ReactNode;
 	isActive?: boolean;
 	subItems?: SidebarNavItem[];
+	onClick?: () => void;
 };
 
 export type SidebarNavGroup = {
@@ -105,18 +106,10 @@ export const navGroups: SidebarNavGroup[] = [
 
 export const footerNavLinks: SidebarNavItem[] = [
 	{
-		title: "Help Center",
-		path: "#/help",
+		title: "Sign out",
+		path: "/signin",
 		icon: (
-			<QuestionIcon
-			/>
-		),
-	},
-	{
-		title: "System status",
-		path: "#/status",
-		icon: (
-			<PulseIcon
+			<SignOutIcon
 			/>
 		),
 	},
