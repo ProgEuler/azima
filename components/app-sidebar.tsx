@@ -29,9 +29,9 @@ export function AppSidebar({
       <Sidebar collapsible="icon" variant="inset">
          <SidebarHeader className="h-24 justify-center">
             {/* <SidebarMenuButton render={<a href="#link" />}> */}
-            <div className="flex items-center gap-2">
-               <Image src="/logo.png" alt="Logo" width={62} height={62} />
-               <span className="font-medium">azim</span>
+            <div className="flex items-center justify-center gap-2">
+               <Image src="/logo.png" alt="Logo" width={90} height={90} />
+               {/* <span className="font-medium">azim</span> */}
             </div>
             {/* </SidebarMenuButton> */}
          </SidebarHeader>
