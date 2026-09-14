@@ -1,5 +1,6 @@
 "use client";
 
+import { useState } from "react";
 import Image from "next/image";
 import Link from "next/link";
 import {
@@ -12,8 +13,12 @@ import {
 } from "@phosphor-icons/react";
 import { cn } from "@/lib/utils";
 import type { AdminHostUser } from "@/lib/mock-data";
+import { SuspendUserModal } from "@/components/admin/suspend-user-modal";
 
 export function AdminUserDetail({ user }: { user: AdminHostUser }) {
+	const [isSuspendModalOpen, setIsSuspendModalOpen] = useState(false);
+	const [isSuspended, setIsSuspended] = useState(user.status === "suspended");
+	const [suspendReason, setSuspendReason] = useState<string | null>(null);
 	return (
 		<div className="mx-auto w-full max-w-5xl space-y-6 pb-12 font-sans">
 			{/* Back Link */}
@@ -53,13 +58,13 @@ export function AdminUserDetail({ user }: { user: AdminHostUser }) {
 								<h1 className="font-bold text-xl md:text-2xl text-[#1C1917] dark:text-stone-100 tracking-tight">
 									{user.name}
 								</h1>
-								{user.status === "active" ? (
-									<span className="inline-flex items-center rounded-full bg-[#EAF5EC] dark:bg-emerald-950/50 px-2.5 py-0.5 text-xs font-semibold text-[#2D6A42] dark:text-emerald-300">
-										Active
-									</span>
-								) : (
+								{isSuspended ? (
 									<span className="inline-flex items-center rounded-full bg-[#FDF0ED] dark:bg-red-950/50 px-2.5 py-0.5 text-xs font-semibold text-[#B83E28] dark:text-red-400">
 										Suspended
+									</span>
+								) : (
+									<span className="inline-flex items-center rounded-full bg-[#EAF5EC] dark:bg-emerald-950/50 px-2.5 py-0.5 text-xs font-semibold text-[#2D6A42] dark:text-emerald-300">
+										Active
 									</span>
 								)}
 							</div>
@@ -257,6 +262,46 @@ export function AdminUserDetail({ user }: { user: AdminHostUser }) {
 					)}
 				</div>
 			</div>
+
+			{/* Suspend Footer */}
+			<div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pt-2">
+				<p className="text-xs text-[#78716C] dark:text-stone-400 max-w-xl leading-relaxed">
+					{isSuspended
+						? `This user is currently suspended (${suspendReason || "Account suspended"}). They cannot sign in to the platform.`
+						: "Suspending prevents them from signing in, and needs a reason. Orders already placed stay with the caterer."}
+				</p>
+				{isSuspended ? (
+					<button
+						type="button"
+						onClick={() => {
+							setIsSuspended(false);
+							setSuspendReason(null);
+						}}
+						className="rounded-full border border-[#EFECE6] dark:border-stone-800 bg-white dark:bg-stone-900 px-5 py-2 text-xs font-semibold text-[#1C1917] dark:text-stone-100 hover:bg-stone-50 dark:hover:bg-stone-800 transition-colors self-start sm:self-auto cursor-pointer shadow-2xs"
+					>
+						Reinstate user
+					</button>
+				) : (
+					<button
+						type="button"
+						onClick={() => setIsSuspendModalOpen(true)}
+						className="rounded-full border border-[#EFECE6] dark:border-stone-800 bg-white dark:bg-stone-900 px-5 py-2 text-xs font-semibold text-[#B83E28] hover:bg-red-50 dark:hover:bg-red-950/30 transition-colors self-start sm:self-auto cursor-pointer shadow-2xs"
+					>
+						Suspend
+					</button>
+				)}
+			</div>
+
+			<SuspendUserModal
+				open={isSuspendModalOpen}
+				onOpenChange={setIsSuspendModalOpen}
+				userName={user.name}
+				liveOrdersCount={user.liveOccasions ?? 6}
+				onConfirm={(reason) => {
+					setIsSuspended(true);
+					setSuspendReason(reason);
+				}}
+			/>
 		</div>
 	);
 }

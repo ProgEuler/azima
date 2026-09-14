@@ -1,5 +1,6 @@
 "use client";
 
+import { useState } from "react";
 import Image from "next/image";
 import Link from "next/link";
 import {
@@ -12,8 +13,13 @@ import {
 } from "@phosphor-icons/react";
 import { cn } from "@/lib/utils";
 import type { CatererAccount } from "@/lib/mock-data";
+import { SuspendProviderModal } from "@/components/admin/suspend-provider-modal";
 
 export function AdminProviderDetail({ provider }: { provider: CatererAccount }) {
+	const [isSuspendModalOpen, setIsSuspendModalOpen] = useState(false);
+	const [isSuspended, setIsSuspended] = useState(provider.isSuspended ?? false);
+	const [suspendReason, setSuspendReason] = useState<string | null>(null);
+
 	const tradingTerms = provider.tradingTerms;
 	const menuCategories = provider.menuCategories || [];
 	const ordersList = provider.ordersList || [];
@@ -51,9 +57,15 @@ export function AdminProviderDetail({ provider }: { provider: CatererAccount }) 
 								<h1 className="font-bold text-xl md:text-2xl text-[#1C1917] dark:text-stone-100 tracking-tight">
 									{provider.name}
 								</h1>
-								<span className="inline-flex items-center rounded-full bg-[#EAF5EC] dark:bg-emerald-950/50 px-2.5 py-0.5 text-xs font-semibold text-[#2D6A42] dark:text-emerald-300">
-									Approved
-								</span>
+								{isSuspended ? (
+									<span className="inline-flex items-center rounded-full bg-[#FDF2F0] dark:bg-rose-950/50 px-2.5 py-0.5 text-xs font-semibold text-[#B83E28] dark:text-rose-300">
+										Suspended
+									</span>
+								) : (
+									<span className="inline-flex items-center rounded-full bg-[#EAF5EC] dark:bg-emerald-950/50 px-2.5 py-0.5 text-xs font-semibold text-[#2D6A42] dark:text-emerald-300">
+										Approved
+									</span>
+								)}
 							</div>
 
 							<div className="flex items-center flex-wrap gap-1 text-xs sm:text-sm text-[#78716C] dark:text-stone-400">
@@ -411,15 +423,42 @@ export function AdminProviderDetail({ provider }: { provider: CatererAccount }) 
 			{/* Suspend Footer */}
 			<div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pt-2">
 				<p className="text-xs text-[#78716C] dark:text-stone-400 max-w-xl leading-relaxed">
-					Suspending hides them from discovery and blocks sign-in, and needs a reason. Orders already placed stay on the platform.
+					{isSuspended
+						? `This provider is currently suspended (${suspendReason || "Account suspended"}). They cannot sign in and are hidden from discovery.`
+						: "Suspending hides them from discovery and blocks sign-in, and needs a reason. Orders already placed stay on the platform."}
 				</p>
-				<button
-					type="button"
-					className="rounded-full border border-[#EFECE6] dark:border-stone-800 bg-white dark:bg-stone-900 px-5 py-2 text-xs font-semibold text-[#B83E28] hover:bg-red-50 dark:hover:bg-red-950/30 transition-colors self-start sm:self-auto cursor-pointer shadow-2xs"
-				>
-					Suspend
-				</button>
+				{isSuspended ? (
+					<button
+						type="button"
+						onClick={() => {
+							setIsSuspended(false);
+							setSuspendReason(null);
+						}}
+						className="rounded-full border border-[#EFECE6] dark:border-stone-800 bg-white dark:bg-stone-900 px-5 py-2 text-xs font-semibold text-[#1C1917] dark:text-stone-100 hover:bg-stone-50 dark:hover:bg-stone-800 transition-colors self-start sm:self-auto cursor-pointer shadow-2xs"
+					>
+						Reinstate provider
+					</button>
+				) : (
+					<button
+						type="button"
+						onClick={() => setIsSuspendModalOpen(true)}
+						className="rounded-full border border-[#EFECE6] dark:border-stone-800 bg-white dark:bg-stone-900 px-5 py-2 text-xs font-semibold text-[#B83E28] hover:bg-red-50 dark:hover:bg-red-950/30 transition-colors self-start sm:self-auto cursor-pointer shadow-2xs"
+					>
+						Suspend
+					</button>
+				)}
 			</div>
+
+			<SuspendProviderModal
+				open={isSuspendModalOpen}
+				onOpenChange={setIsSuspendModalOpen}
+				providerName={provider.name}
+				liveOrdersCount={provider.liveOrders}
+				onConfirm={(reason) => {
+					setIsSuspended(true);
+					setSuspendReason(reason);
+				}}
+			/>
 		</div>
 	);
 }

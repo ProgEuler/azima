@@ -1,7 +1,9 @@
+import { ProviderRequests } from "@/components/provider/provider-requests";
+
 export default function ProviderRequestsPage() {
   return (
-    <div className="flex min-h-svh items-center justify-center">
-      <h1 className="font-medium text-2xl">Requests</h1>
+    <div className="-m-4 md:-m-6 min-h-full bg-[#FAF8F5] dark:bg-[#141210] p-4 md:p-8 transition-colors">
+      <ProviderRequests />
     </div>
   );
 }

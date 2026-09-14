@@ -33,9 +33,9 @@ import {
 } from "@phosphor-icons/react";
 
 const user = {
-	name: "Shaban Haider",
-	email: "shaban@efferd.com",
-	avatar: "https://github.com/shabanhr.png",
+	name: "Saruf Khan",
+	email: "saruf700@gmail.com",
+	avatar: "https://res.cloudinary.com/dicqtpu0g/image/upload/v1772311122/image-removebg-preview_2_ej36dj.png",
 };
 
 export function NavUser() {
@@ -144,4 +144,3 @@ export function NavUser() {
 		</DropdownMenu>
 	);
 }
-
