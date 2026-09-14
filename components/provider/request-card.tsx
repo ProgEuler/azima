@@ -12,6 +12,7 @@ import {
 } from "@phosphor-icons/react";
 import { cn } from "@/lib/utils";
 import type { ProviderRequest } from "./provider-mock-data";
+import { AcceptRequestDialog } from "@/components/provider/accept-request-dialog";
 
 export function RequestCard({
 	request,
@@ -25,6 +26,7 @@ export function RequestCard({
 	const [status, setStatus] = useState<"Awaiting response" | "Accepted" | "Rejected">(
 		request.status
 	);
+	const [acceptDialogOpen, setAcceptDialogOpen] = useState(false);
 
 	const handleAccept = () => {
 		setStatus("Accepted");
@@ -203,7 +205,7 @@ export function RequestCard({
 						<>
 							<button
 								type="button"
-								onClick={handleAccept}
+								onClick={() => setAcceptDialogOpen(true)}
 								className="rounded-full bg-[#8B351F] hover:bg-[#722A18] text-white px-5 py-2 text-xs font-semibold transition-colors shadow-2xs cursor-pointer"
 							>
 								Accept
@@ -252,6 +254,13 @@ export function RequestCard({
 					Details
 				</Link>
 			</div>
+
+			<AcceptRequestDialog
+				open={acceptDialogOpen}
+				onOpenChange={setAcceptDialogOpen}
+				request={request}
+				onConfirm={handleAccept}
+			/>
 		</div>
 	);
 }
