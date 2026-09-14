@@ -13,7 +13,6 @@ import {
 	StethoscopeIcon,
 	ReceiptIcon,
 	BellRingingIcon,
-	UserCircleIcon,
 	PaperPlaneTiltIcon,
 	BellIcon,
 } from "@phosphor-icons/react";
@@ -31,8 +30,6 @@ export function AppHeader() {
 		activeItem = { title: "Orders", icon: <ReceiptIcon /> };
 	} else if (pathname.startsWith("/admin/notification-delivery")) {
 		activeItem = { title: "Notification Delivery", icon: <BellRingingIcon /> };
-	} else if (pathname.startsWith("/admin/account")) {
-		activeItem = { title: "Account", icon: <UserCircleIcon /> };
 	}
 	return (
 		<header

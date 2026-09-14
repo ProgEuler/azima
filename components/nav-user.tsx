@@ -12,9 +12,25 @@ import {
 	DropdownMenuItem,
 	DropdownMenuLabel,
 	DropdownMenuSeparator,
+	DropdownMenuSub,
+	DropdownMenuSubContent,
+	DropdownMenuSubTrigger,
 	DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { UserIcon, BellIcon, CommandIcon, LifebuoyIcon, GraduationCapIcon, CreditCardIcon, SignOutIcon } from "@phosphor-icons/react";
+import {
+	UserIcon,
+	BellIcon,
+	CommandIcon,
+	LifebuoyIcon,
+	GraduationCapIcon,
+	CreditCardIcon,
+	SignOutIcon,
+	IdentificationCardIcon,
+	ShieldCheckIcon,
+	KeyIcon,
+	PaintBrushIcon,
+	BellRingingIcon,
+} from "@phosphor-icons/react";
 
 const user = {
 	name: "Shaban Haider",
@@ -56,43 +72,61 @@ export function NavUser() {
 				</DropdownMenuItem>
 				<DropdownMenuSeparator />
 				<DropdownMenuGroup>
-					<DropdownMenuItem>
-						<UserIcon
-						/>
-						Profile
-					</DropdownMenuItem>
+					<DropdownMenuSub>
+						<DropdownMenuSubTrigger>
+							<UserIcon />
+							Profile
+						</DropdownMenuSubTrigger>
+						<DropdownMenuSubContent>
+							<DropdownMenuItem>
+								<IdentificationCardIcon />
+								My account
+							</DropdownMenuItem>
+							<DropdownMenuItem>
+								<ShieldCheckIcon />
+								Privacy & security
+							</DropdownMenuItem>
+							<DropdownMenuItem>
+								<KeyIcon />
+								Password & authentication
+							</DropdownMenuItem>
+							<DropdownMenuItem>
+								<PaintBrushIcon />
+								Appearance
+							</DropdownMenuItem>
+							<DropdownMenuItem>
+								<BellRingingIcon />
+								Notification preferences
+							</DropdownMenuItem>
+						</DropdownMenuSubContent>
+					</DropdownMenuSub>
 				</DropdownMenuGroup>
 				<DropdownMenuSeparator />
 				<DropdownMenuGroup>
 					<DropdownMenuItem>
-						<BellIcon
-						/>
+						<BellIcon />
 						Notifications
 					</DropdownMenuItem>
 					<DropdownMenuItem>
-						<CommandIcon
-						/>
+						<CommandIcon />
 						Keyboard shortcuts
 					</DropdownMenuItem>
 				</DropdownMenuGroup>
 				<DropdownMenuSeparator />
 				<DropdownMenuGroup>
 					<DropdownMenuItem>
-						<LifebuoyIcon
-						/>
+						<LifebuoyIcon />
 						Help center
 					</DropdownMenuItem>
 					<DropdownMenuItem>
-						<GraduationCapIcon
-						/>
+						<GraduationCapIcon />
 						Agent training
 					</DropdownMenuItem>
 				</DropdownMenuGroup>
 				<DropdownMenuSeparator />
 				<DropdownMenuGroup>
 					<DropdownMenuItem>
-						<CreditCardIcon
-						/>
+						<CreditCardIcon />
 						Subscription
 					</DropdownMenuItem>
 				</DropdownMenuGroup>
@@ -102,8 +136,7 @@ export function NavUser() {
 						className="w-full cursor-pointer"
 						variant="destructive"
 					>
-						<SignOutIcon
-						/>
+						<SignOutIcon />
 						Log out
 					</DropdownMenuItem>
 				</DropdownMenuGroup>
@@ -111,3 +144,4 @@ export function NavUser() {
 		</DropdownMenu>
 	);
 }
+

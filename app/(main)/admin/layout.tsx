@@ -7,7 +7,6 @@ import {
 	ReceiptIcon,
 	SquaresFourIcon,
 	StethoscopeIcon,
-	UserCircleIcon,
 	UsersFourIcon,
 } from "@phosphor-icons/react";
 import { AppShell } from "@/components/app-shell";
@@ -41,11 +40,6 @@ const adminNavGroups: SidebarNavGroup[] = [
 				title: "Notification Delivery",
 				path: "/admin/notification-delivery",
 				icon: <BellRingingIcon />,
-			},
-			{
-				title: "Account",
-				path: "/admin/account",
-				icon: <UserCircleIcon />,
 			},
 		],
 	},
