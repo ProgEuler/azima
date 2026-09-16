@@ -10,26 +10,13 @@ import {
 	DropdownMenuContent,
 	DropdownMenuGroup,
 	DropdownMenuItem,
-	DropdownMenuLabel,
 	DropdownMenuSeparator,
-	DropdownMenuSub,
-	DropdownMenuSubContent,
-	DropdownMenuSubTrigger,
 	DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import {
-	UserIcon,
-	BellIcon,
-	CommandIcon,
-	LifebuoyIcon,
-	GraduationCapIcon,
-	CreditCardIcon,
 	SignOutIcon,
-	IdentificationCardIcon,
-	ShieldCheckIcon,
-	KeyIcon,
-	PaintBrushIcon,
-	BellRingingIcon,
+	StorefrontIcon,
+	UserIcon,
 } from "@phosphor-icons/react";
 
 const user = {
@@ -55,79 +42,27 @@ export function NavUser() {
 				}
 			/>
 			<DropdownMenuContent align="end" className="w-60">
-				<DropdownMenuItem className="flex items-center justify-start gap-2">
-					<DropdownMenuLabel className="flex items-center gap-3">
-						<Avatar className="size-10">
-							<AvatarImage src={user.avatar} />
-							<AvatarFallback>{user.name.charAt(0)}</AvatarFallback>
-						</Avatar>
-						<div>
-							<span className="font-medium text-foreground">{user.name}</span>{" "}
-							<br />
-							<div className="max-w-full overflow-hidden overflow-ellipsis whitespace-nowrap text-muted-foreground text-xs">
-								{user.email}
-							</div>
+				<div className="flex items-center gap-3 px-3 py-2.5">
+					<Avatar className="size-10">
+						<AvatarImage src={user.avatar} />
+						<AvatarFallback>{user.name.charAt(0)}</AvatarFallback>
+					</Avatar>
+					<div className="min-w-0">
+						<div className="font-medium text-foreground truncate">{user.name}</div>
+						<div className="max-w-full overflow-hidden overflow-ellipsis whitespace-nowrap text-muted-foreground text-xs">
+							{user.email}
 						</div>
-					</DropdownMenuLabel>
-				</DropdownMenuItem>
-				<DropdownMenuSeparator />
-				<DropdownMenuGroup>
-					<DropdownMenuSub>
-						<DropdownMenuSubTrigger>
-							<UserIcon />
-							Profile
-						</DropdownMenuSubTrigger>
-						<DropdownMenuSubContent>
-							<DropdownMenuItem>
-								<IdentificationCardIcon />
-								My account
-							</DropdownMenuItem>
-							<DropdownMenuItem>
-								<ShieldCheckIcon />
-								Privacy & security
-							</DropdownMenuItem>
-							<DropdownMenuItem>
-								<KeyIcon />
-								Password & authentication
-							</DropdownMenuItem>
-							<DropdownMenuItem>
-								<PaintBrushIcon />
-								Appearance
-							</DropdownMenuItem>
-							<DropdownMenuItem>
-								<BellRingingIcon />
-								Notification preferences
-							</DropdownMenuItem>
-						</DropdownMenuSubContent>
-					</DropdownMenuSub>
-				</DropdownMenuGroup>
+					</div>
+				</div>
 				<DropdownMenuSeparator />
 				<DropdownMenuGroup>
 					<DropdownMenuItem>
-						<BellIcon />
-						Notifications
+						<UserIcon />
+						My profile
 					</DropdownMenuItem>
 					<DropdownMenuItem>
-						<CommandIcon />
-						Keyboard shortcuts
-					</DropdownMenuItem>
-				</DropdownMenuGroup>
-				<DropdownMenuSeparator />
-				<DropdownMenuGroup>
-					<DropdownMenuItem>
-						<LifebuoyIcon />
-						Help center
-					</DropdownMenuItem>
-					<DropdownMenuItem>
-						<GraduationCapIcon />
-						Agent training
-					</DropdownMenuItem>
-				</DropdownMenuGroup>
-				<DropdownMenuSeparator />
-				<DropdownMenuGroup>
-					<DropdownMenuItem>
-						<CreditCardIcon />
-						Subscription
+						<StorefrontIcon />
+						Business page & menu
 					</DropdownMenuItem>
 				</DropdownMenuGroup>
 				<DropdownMenuSeparator />
@@ -137,7 +72,7 @@ export function NavUser() {
 						variant="destructive"
 					>
 						<SignOutIcon />
-						Log out
+						Sign out
 					</DropdownMenuItem>
 				</DropdownMenuGroup>
 			</DropdownMenuContent>
