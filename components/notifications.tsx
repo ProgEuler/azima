@@ -70,8 +70,6 @@ const notifications: Notification[] = [
 	},
 ];
 
-const UNREAD_COUNT = notifications.filter((n) => n.unread).length;
-
 export function Notifications() {
 	return (
 		<DropdownMenu>
@@ -79,9 +77,6 @@ export function Notifications() {
 				render={
 					<Button aria-label="Notifications" size="icon-sm" variant="outline">
 						<BellIcon />
-						{UNREAD_COUNT > 0 && (
-							<span className="absolute top-1.5 right-1.5 size-2 rounded-full bg-red-500 ring-2 ring-background" />
-						)}
 					</Button>
 				}
 			/>

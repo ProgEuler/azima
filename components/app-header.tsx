@@ -47,10 +47,10 @@ export function AppHeader() {
 				<AppBreadcrumbs page={activeItem} />
 			</div>
 			<div className="flex items-center gap-3">
-				<Button size="icon-sm" variant="outline">
+				{/* <Button size="icon-sm" variant="outline">
 					<PaperPlaneTiltIcon
 					/>
-				</Button>
+				</Button> */}
 				<Notifications />
 				<ThemeToggle />
 				<Separator
