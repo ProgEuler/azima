@@ -67,7 +67,7 @@ export default function AdminLayout({
 	}));
 
 	return (
-		<AppShell navGroups={navGroups}>
+		<AppShell role="admin" navGroups={navGroups}>
 			{children}
 		</AppShell>
 	);

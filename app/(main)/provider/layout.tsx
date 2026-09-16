@@ -8,6 +8,7 @@ import {
 	PackageIcon,
 	UserCircleIcon,
 } from "@phosphor-icons/react";
+import { usePathname } from "next/navigation";
 import { AppShell } from "@/components/app-shell";
 import type { SidebarNavGroup } from "@/components/app-shared";
 
@@ -18,7 +19,6 @@ const providerNavGroups: SidebarNavGroup[] = [
 				title: "Dashboard",
 				path: "/provider",
 				icon: <HouseLineIcon />,
-				isActive: true,
 			},
 			{
 				title: "Requests",
@@ -54,8 +54,24 @@ export default function ProviderLayout({
 }: {
 	children: React.ReactNode;
 }) {
+	const pathname = usePathname();
+
+	const navGroups = providerNavGroups.map((group) => ({
+		...group,
+		items: group.items.map((item) => {
+			const isActive =
+				item.path === "/provider"
+					? pathname === "/provider"
+					: !!item.path && pathname.startsWith(item.path);
+			return {
+				...item,
+				isActive,
+			};
+		}),
+	}));
+
 	return (
-		<AppShell navGroups={providerNavGroups}>
+		<AppShell role="provider" navGroups={navGroups}>
 			{children}
 		</AppShell>
 	);
