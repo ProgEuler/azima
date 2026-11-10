@@ -17,6 +17,8 @@ import {
 import { AuthShell } from "@/components/auth-shell"
 import { Button } from "@/components/ui/button"
 import { Field } from "@/components/ui/field"
+import { FormError } from "@/components/form-error"
+import { authApi } from "@/lib/api/auth"
 import {
 	InputGroup,
 	InputGroupAddon,
@@ -41,6 +43,7 @@ export function ResetPasswordForm() {
 	const [showPassword, setShowPassword] = useState(false)
 	const [showConfirm, setShowConfirm] = useState(false)
 	const [done, setDone] = useState(false)
+	const [submitError, setSubmitError] = useState<unknown>(null)
 
 	useEffect(() => {
 		// Mid-flow guard: only allow entry if email + otpVerified are set.
@@ -59,12 +62,23 @@ export function ResetPasswordForm() {
 		defaultValues: { password: "", confirm: "" },
 	})
 
-	const onSubmit = handleSubmit(() => {
-		setTimeout(() => {
+	const onSubmit = handleSubmit(async (values) => {
+		const email = sessionStorage.getItem("resetEmail")
+		const otp = sessionStorage.getItem("resetOtp")
+		if (!email || !otp) {
+			router.replace("/forgot-password")
+			return
+		}
+		setSubmitError(null)
+		try {
+			await authApi.resetPassword(email, otp, values.password)
 			sessionStorage.removeItem("resetEmail")
+			sessionStorage.removeItem("resetOtp")
 			sessionStorage.removeItem("otpVerified")
 			setDone(true)
-		}, 600)
+		} catch (error) {
+			setSubmitError(error)
+		}
 	})
 
 	if (done) {
@@ -108,6 +122,7 @@ export function ResetPasswordForm() {
 					</p>
 				</header>
 
+				<FormError error={submitError} />
 				<Field label="New password" error={errors.password?.message}>
 					<InputGroup>
 						<InputGroupInput

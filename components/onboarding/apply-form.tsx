@@ -11,6 +11,7 @@ import {
 	EyeIcon,
 } from "@phosphor-icons/react"
 
+import { onboardingStore } from "@/lib/onboarding-store"
 import { OnboardingShell } from "@/components/onboarding-shell"
 import { OnboardingStepper } from "@/components/onboarding-stepper"
 import { Button } from "@/components/ui/button"
@@ -48,7 +49,7 @@ export function ApplyForm() {
 		resolver: zodResolver(schema),
 		mode: "onSubmit",
 		reValidateMode: "onChange",
-		defaultValues: {
+		defaultValues: onboardingStore.get() ?? {
 			businessName: "",
 			businessEmail: "",
 			phone: "",
@@ -56,7 +57,8 @@ export function ApplyForm() {
 		},
 	})
 
-	const onSubmit = handleSubmit(() => {
+	const onSubmit = handleSubmit((values) => {
+		onboardingStore.set(values)
 		router.push("/onboarding/kitchen")
 	})
 

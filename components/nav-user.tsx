@@ -19,13 +19,19 @@ import {
 	UserIcon,
 } from "@phosphor-icons/react";
 
-const user = {
-	name: "Saruf Khan",
-	email: "saruf700@gmail.com",
-	avatar: "https://res.cloudinary.com/dicqtpu0g/image/upload/v1772311122/image-removebg-preview_2_ej36dj.png",
-};
+import Link from "next/link";
+import { useAuth } from "@/components/auth-provider";
+import { mediaUrl } from "@/lib/api/client";
 
 export function NavUser() {
+	const { user: account, signOut } = useAuth();
+	const isProvider = account?.role === "provider";
+	const user = {
+		name: account?.business_name || account?.full_name || account?.email || "Account",
+		email: account?.email ?? "",
+		avatar: mediaUrl(account?.logo) ?? undefined,
+	};
+
 	return (
 		<DropdownMenu>
 			<DropdownMenuTrigger
@@ -36,7 +42,7 @@ export function NavUser() {
 					>
 						<Avatar className="size-8">
 							<AvatarImage src={user.avatar} />
-							<AvatarFallback>{user.name.charAt(0)}</AvatarFallback>
+							<AvatarFallback>{user.name.charAt(0).toUpperCase()}</AvatarFallback>
 						</Avatar>
 					</button>
 				}
@@ -45,7 +51,7 @@ export function NavUser() {
 				<div className="flex items-center gap-3 px-3 py-2.5">
 					<Avatar className="size-10">
 						<AvatarImage src={user.avatar} />
-						<AvatarFallback>{user.name.charAt(0)}</AvatarFallback>
+						<AvatarFallback>{user.name.charAt(0).toUpperCase()}</AvatarFallback>
 					</Avatar>
 					<div className="min-w-0">
 						<div className="font-medium text-foreground truncate">{user.name}</div>
@@ -56,20 +62,25 @@ export function NavUser() {
 				</div>
 				<DropdownMenuSeparator />
 				<DropdownMenuGroup>
-					<DropdownMenuItem>
-						<UserIcon />
-						My profile
-					</DropdownMenuItem>
-					<DropdownMenuItem>
-						<StorefrontIcon />
-						Business page & menu
-					</DropdownMenuItem>
+					{isProvider ? (
+						<>
+							<DropdownMenuItem render={<Link href="/provider/account" />}>
+								<UserIcon />
+								My profile
+							</DropdownMenuItem>
+							<DropdownMenuItem render={<Link href="/provider/services" />}>
+								<StorefrontIcon />
+								Business page & menu
+							</DropdownMenuItem>
+						</>
+					) : null}
 				</DropdownMenuGroup>
 				<DropdownMenuSeparator />
 				<DropdownMenuGroup>
 					<DropdownMenuItem
 						className="w-full cursor-pointer"
 						variant="destructive"
+						onClick={() => void signOut()}
 					>
 						<SignOutIcon />
 						Sign out

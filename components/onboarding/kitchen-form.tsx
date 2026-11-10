@@ -1,11 +1,16 @@
 "use client"
 
+import { useEffect, useState } from "react"
 import Link from "next/link"
 import { useRouter } from "next/navigation"
 import { useForm, Controller } from "react-hook-form"
 import { zodResolver } from "@hookform/resolvers/zod"
 import { z } from "zod"
 
+import { FormError } from "@/components/form-error"
+import { useAuth } from "@/components/auth-provider"
+import { authApi } from "@/lib/api/auth"
+import { onboardingStore } from "@/lib/onboarding-store"
 import { OnboardingShell } from "@/components/onboarding-shell"
 import { OnboardingStepper } from "@/components/onboarding-stepper"
 import { Button } from "@/components/ui/button"
@@ -46,8 +51,27 @@ const schema = z.object({
 
 type FormValues = z.infer<typeof schema>
 
+const SERVICE_VALUES = {
+   Catering: "catering",
+   Sweets: "sweets",
+   Drinks: "drinks",
+} as const
+
+const NOTICE_VALUES = {
+   any: "instant",
+   "48h": "at_least_48_hours",
+} as const
+
 export function KitchenForm() {
    const router = useRouter()
+   const { signIn } = useAuth()
+   const [submitError, setSubmitError] = useState<unknown>(null)
+
+   // The account step lives in memory; after a refresh it must be re-entered.
+   useEffect(() => {
+      if (!onboardingStore.get()) router.replace("/onboarding")
+   }, [router])
+
 
    const {
       register,
@@ -67,8 +91,33 @@ export function KitchenForm() {
       },
    })
 
-   const onSubmit = handleSubmit(() => {
-      router.push("/onboarding/submitted")
+   const onSubmit = handleSubmit(async (values) => {
+      const account = onboardingStore.get()
+      if (!account) {
+         router.replace("/onboarding")
+         return
+      }
+      setSubmitError(null)
+      try {
+         await authApi.registerProvider({
+            business_name: account.businessName,
+            business_email: account.businessEmail,
+            phone: account.phone,
+            password: account.password,
+            service_types: values.services.map((s) => SERVICE_VALUES[s]),
+            city: values.city,
+            description: values.bio,
+            smallest_order: values.orderRange[0],
+            largest_order: values.orderRange[1],
+            order_notice_period: NOTICE_VALUES[values.notice],
+         })
+         // Sign the new caterer in so the status page can show their review state.
+         await signIn(account.businessEmail, account.password)
+         onboardingStore.clear()
+         router.push("/onboarding/submitted")
+      } catch (error) {
+         setSubmitError(error)
+      }
    })
 
    return (
@@ -129,6 +178,7 @@ export function KitchenForm() {
                               return (
                                  <Button
                                     key={service}
+                                    type="button"
                                     variant={isSelected ? "default" : "outline"}
                                     size="sm"
                                     onClick={() => {
@@ -231,13 +281,15 @@ export function KitchenForm() {
                />
             </div>
 
+            <FormError error={submitError} />
+
             <Button
                className="w-full rounded-full"
                size="lg"
                type="submit"
                disabled={isSubmitting}
             >
-               Submit application
+               {isSubmitting ? "Submitting…" : "Submit application"}
             </Button>
 
             <p className="text-center text-sm">

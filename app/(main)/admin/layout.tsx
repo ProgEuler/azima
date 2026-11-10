@@ -8,6 +8,7 @@ import {
 	UsersFourIcon,
 } from "@phosphor-icons/react";
 import { AppShell } from "@/components/app-shell";
+import { AuthGuard } from "@/components/auth-guard";
 import type { SidebarNavGroup } from "@/components/app-shared";
 
 const adminNavGroups: SidebarNavGroup[] = [
@@ -67,8 +68,10 @@ export default function AdminLayout({
 	}));
 
 	return (
-		<AppShell role="admin" navGroups={navGroups}>
-			{children}
-		</AppShell>
+		<AuthGuard role="admin">
+			<AppShell role="admin" navGroups={navGroups}>
+				{children}
+			</AppShell>
+		</AuthGuard>
 	);
 }

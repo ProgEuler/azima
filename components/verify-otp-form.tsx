@@ -10,13 +10,11 @@ import { EnvelopeSimpleIcon } from "@phosphor-icons/react"
 import { AuthShell } from "@/components/auth-shell"
 import { Button } from "@/components/ui/button"
 import { OtpInput } from "@/components/ui/otp-input"
-import { MOCK_OTP } from "@/lib/auth-mocks"
+import { FormError } from "@/components/form-error"
+import { authApi } from "@/lib/api/auth"
 
 const schema = z.object({
-	code: z
-		.string()
-		.length(6, "Enter the 6-digit code")
-		.refine((v) => v === MOCK_OTP, "Invalid code. Try again."),
+	code: z.string().length(6, "Enter the 6-digit code"),
 })
 
 type FormInput = z.input<typeof schema>
@@ -31,6 +29,7 @@ export function VerifyOtpForm() {
 	)
 	const [resendCountdown, setResendCountdown] = useState(30)
 	const [code, setCode] = useState("")
+	const [submitError, setSubmitError] = useState<unknown>(null)
 
 	useEffect(() => {
 		if (!email) router.replace("/forgot-password")
@@ -53,10 +52,31 @@ export function VerifyOtpForm() {
 		defaultValues: { code: "" },
 	})
 
-	const onSubmit = handleSubmit(() => {
-		sessionStorage.setItem("otpVerified", "true")
-		setTimeout(() => router.push("/reset-password"), 400)
+	const onSubmit = handleSubmit(async (values) => {
+		if (!email) return
+		setSubmitError(null)
+		try {
+			await authApi.checkOtp(email, values.code)
+			sessionStorage.setItem("otpVerified", "true")
+			sessionStorage.setItem("resetOtp", values.code)
+			router.push("/reset-password")
+		} catch (error) {
+			setSubmitError(error)
+		}
 	})
+
+	const resend = async () => {
+		if (!email) return
+		setSubmitError(null)
+		try {
+			await authApi.forgotPassword(email)
+			setResendCountdown(30)
+			setCode("")
+			setValue("code", "", { shouldValidate: false })
+		} catch (error) {
+			setSubmitError(error)
+		}
+	}
 
 	return (
 		<AuthShell>
@@ -80,10 +100,11 @@ export function VerifyOtpForm() {
 						) : (
 							"your inbox"
 						)}
-						. It expires in 10 minutes.
+						. It expires in 15 minutes.
 					</p>
 				</header>
 
+				<FormError error={submitError} />
 				<OtpInput
 					value={code}
 					onChange={(v) => {
@@ -120,11 +141,7 @@ export function VerifyOtpForm() {
 						<Button
 							variant="link"
 							className="h-auto p-0 font-semibold text-foreground text-sm"
-							onClick={() => {
-								setResendCountdown(30)
-								setCode("")
-								setValue("code", "", { shouldValidate: false })
-							}}
+							onClick={resend}
 						>
 							Resend code
 						</Button>

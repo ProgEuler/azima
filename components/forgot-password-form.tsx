@@ -1,6 +1,7 @@
 "use client"
 
 import Link from "next/link"
+import { useState } from "react"
 import { useRouter } from "next/navigation"
 import { useForm } from "react-hook-form"
 import { zodResolver } from "@hookform/resolvers/zod"
@@ -10,6 +11,8 @@ import { EnvelopeIcon } from "@phosphor-icons/react"
 import { AuthShell } from "@/components/auth-shell"
 import { Button } from "@/components/ui/button"
 import { Field } from "@/components/ui/field"
+import { FormError } from "@/components/form-error"
+import { authApi } from "@/lib/api/auth"
 import {
 	InputGroup,
 	InputGroupAddon,
@@ -24,6 +27,7 @@ type FormValues = z.infer<typeof schema>
 
 export function ForgotPasswordForm() {
 	const router = useRouter()
+	const [submitError, setSubmitError] = useState<unknown>(null)
 
 	const {
 		register,
@@ -36,9 +40,16 @@ export function ForgotPasswordForm() {
 		defaultValues: { email: "" },
 	})
 
-	const onSubmit = handleSubmit((values) => {
-		sessionStorage.setItem("resetEmail", values.email)
-		setTimeout(() => router.push("/verify-otp"), 600)
+	const onSubmit = handleSubmit(async (values) => {
+		setSubmitError(null)
+		try {
+			await authApi.forgotPassword(values.email)
+			sessionStorage.setItem("resetEmail", values.email)
+			sessionStorage.removeItem("resetOtp")
+			router.push("/verify-otp")
+		} catch (error) {
+			setSubmitError(error)
+		}
 	})
 
 	return (
@@ -54,6 +65,7 @@ export function ForgotPasswordForm() {
 					</p>
 				</header>
 
+				<FormError error={submitError} />
 				<Field label="Email" error={errors.email?.message}>
 					<InputGroup>
 						<InputGroupInput
