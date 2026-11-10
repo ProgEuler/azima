@@ -1,82 +1,96 @@
 "use client";
 
+import { useCallback, useEffect, useState } from "react";
+import { useRouter } from "next/navigation";
 import {
 	DropdownMenu,
 	DropdownMenuContent,
 	DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import {
-	Avatar,
-	AvatarFallback,
-	AvatarImage,
-} from "@/components/ui/avatar";
+import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
-import { BellIcon, ClockIcon } from "@phosphor-icons/react";
-import { cn } from "@/lib/utils";
+import {
+	BellIcon,
+	ClockIcon,
+	CreditCardIcon,
+	CalendarBlankIcon,
+	ReceiptIcon,
+	MegaphoneIcon,
+} from "@phosphor-icons/react";
+import { useAuth } from "@/components/auth-provider";
+import {
+	notificationsApi,
+	type AppNotification,
+	type NotificationPage,
+} from "@/lib/api/notifications";
+import { ago } from "@/lib/format";
 
-type Notification = {
-	id: string;
-	title: string;
-	description: string;
-	time: string;
-	avatar: string;
-	unread?: boolean;
-	permission?: {
-		accept?: string;
-		decline?: string;
-	};
+const POLL_MS = 60_000;
+
+const TYPE_ICON: Record<AppNotification["type"], React.ReactNode> = {
+	order: <ReceiptIcon />,
+	payment: <CreditCardIcon />,
+	event: <CalendarBlankIcon />,
+	system: <BellIcon />,
+	promotion: <MegaphoneIcon />,
 };
 
-const notifications: Notification[] = [
-	{
-		id: "1",
-		title: "Your order is placed",
-		description: "Amet minim mollit non deser unt ullamco...",
-		time: "2 days ago",
-		avatar:
-			"https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=80&h=80&fit=crop&crop=face",
-		unread: false,
-	},
-	{
-		id: "2",
-		title: "Congratulations Darlene 🎉",
-		description: "Won the monthly best seller badge",
-		time: "11 am",
-		avatar:
-			"https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=80&h=80&fit=crop&crop=face",
-		unread: true,
-	},
-	{
-		id: "3",
-		title: "Joaquina Weisenborn",
-		description: "Requesting access permission",
-		time: "12 pm",
-		avatar:
-			"https://images.unsplash.com/photo-1438761681033-6461ffad8d80?w=80&h=80&fit=crop&crop=face",
-		unread: true,
-		permission: {
-			accept: "Accept",
-			decline: "Decline",
-		},
-	},
-	{
-		id: "4",
-		title: "Brooklyn Simmons",
-		description: "Added you to Top Secret Project...",
-		time: "1 pm",
-		avatar:
-			"https://images.unsplash.com/photo-1599566150163-29194dcaad36?w=80&h=80&fit=crop&crop=face",
-		unread: true,
-	},
-];
-
 export function Notifications() {
+	const router = useRouter();
+	const { user } = useAuth();
+	const [page, setPage] = useState<NotificationPage | null>(null);
+
+	const load = useCallback(async () => {
+		try {
+			setPage(await notificationsApi.list());
+		} catch {
+			// The bell is best-effort; a failed poll keeps the last known state.
+		}
+	}, []);
+
+	useEffect(() => {
+		void Promise.resolve().then(load);
+		const timer = setInterval(() => void load(), POLL_MS);
+		return () => clearInterval(timer);
+	}, [load]);
+
+	const unread = page?.unread_count ?? 0;
+	const items = page?.results ?? [];
+
+	async function open(notification: AppNotification) {
+		if (!notification.is_read) {
+			try {
+				await notificationsApi.markRead(notification.id);
+			} catch {
+				// Navigating still works if marking read fails.
+			}
+			void load();
+		}
+		const orderId = notification.data?.order_id;
+		if (orderId && user) {
+			router.push(user.role === "admin" ? `/admin/orders/${orderId}` : `/provider/requests/${orderId}`);
+		}
+	}
+
+	async function markAll() {
+		try {
+			await notificationsApi.markAllRead();
+		} finally {
+			void load();
+		}
+	}
+
 	return (
 		<DropdownMenu>
 			<DropdownMenuTrigger
 				render={
-					<Button aria-label="Notifications" size="icon-sm" variant="outline">
+					<Button aria-label={unread ? `Notifications, ${unread} unread` : "Notifications"} size="icon-sm" variant="outline" className="relative">
 						<BellIcon />
+						{unread > 0 ? (
+							<span className="absolute -top-1 -right-1 flex min-w-4 items-center justify-center rounded-full bg-red-500 px-1 text-[10px] font-semibold leading-4 text-white">
+								{unread > 9 ? "9+" : unread}
+							</span>
+						) : null}
 					</Button>
 				}
 			/>
@@ -87,56 +101,49 @@ export function Notifications() {
 					</span>
 					<button
 						type="button"
-						className="text-sm font-medium text-foreground hover:underline"
+						onClick={() => void markAll()}
+						disabled={unread === 0}
+						className="text-sm font-medium text-foreground hover:underline disabled:opacity-40 disabled:no-underline"
 					>
-						View all
+						Mark all read
 					</button>
 				</div>
 				<div className="max-h-[480px] overflow-y-auto">
-					{notifications.map((notification) => (
-						<div
+					{page && items.length === 0 ? (
+						<p className="px-4 py-8 text-center text-sm text-muted-foreground">
+							You&apos;re all caught up.
+						</p>
+					) : null}
+					{items.map((notification) => (
+						<button
+							type="button"
 							key={notification.id}
-							className={cn(
-								"relative flex gap-3 px-4 py-3 border-b border-border/30 last:border-b-0 hover:bg-muted/30 transition-colors",
-								notification.permission && "bg-muted/20"
-							)}
+							onClick={() => void open(notification)}
+							className="relative flex w-full gap-3 px-4 py-3 text-left border-b border-border/30 last:border-b-0 hover:bg-muted/30 transition-colors"
 						>
 							<Avatar className="size-10 shrink-0">
-								<AvatarImage src={notification.avatar} alt={notification.title} />
-								<AvatarFallback>{notification.title.charAt(0)}</AvatarFallback>
+								<AvatarFallback className="[&_svg]:size-5">{TYPE_ICON[notification.type]}</AvatarFallback>
 							</Avatar>
 							<div className="flex-1 min-w-0">
 								<div className="flex items-start justify-between gap-2">
 									<p className="text-sm font-semibold text-foreground truncate">
 										{notification.title}
 									</p>
-									{notification.unread && (
+									{!notification.is_read && (
 										<span className="mt-1.5 size-2 shrink-0 rounded-full bg-red-500" />
 									)}
 								</div>
-								<p className="text-xs text-muted-foreground mt-0.5 line-clamp-2">
-									{notification.description}
-								</p>
-								{notification.permission ? (
-									<div className="flex items-center gap-2 mt-2">
-										<Button size="sm" variant="outline" className="h-7 px-3 text-xs">
-											{notification.permission.accept}
-										</Button>
-										<Button
-											size="sm"
-											variant="outline"
-											className="h-7 px-3 text-xs text-red-500 border-red-200 hover:bg-red-50 dark:border-red-900/50 dark:hover:bg-red-950/30"
-										>
-											{notification.permission.decline}
-										</Button>
-									</div>
+								{notification.body ? (
+									<p className="text-xs text-muted-foreground mt-0.5 line-clamp-2">
+										{notification.body}
+									</p>
 								) : null}
 								<div className="flex items-center gap-1 mt-1.5 text-xs text-muted-foreground">
 									<ClockIcon className="size-3" />
-									<span>{notification.time}</span>
+									<span>{ago(notification.created_at)}</span>
 								</div>
 							</div>
-						</div>
+						</button>
 					))}
 				</div>
 			</DropdownMenuContent>
