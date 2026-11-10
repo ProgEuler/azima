@@ -1,7 +1,6 @@
 "use client";
 
 import { useState } from "react";
-import Image from "next/image";
 import Link from "next/link";
 import {
 	ArrowLeftIcon,
@@ -11,18 +10,43 @@ import {
 	MapPinIcon,
 	StarIcon,
 } from "@phosphor-icons/react";
-import { cn } from "@/lib/utils";
-import type { CatererAccount } from "@/lib/mock-data";
 import { SuspendProviderModal } from "@/components/admin/suspend-provider-modal";
+import { MediaThumb } from "@/components/media-thumb";
+import { OrderStatusPill } from "@/components/order-status-pill";
+import { FormError, QueryState } from "@/components/form-error";
+import { useApi } from "@/hooks/use-api";
+import { adminApi } from "@/lib/api/admin";
+import { toProviderView } from "@/lib/provider-view";
 
-export function AdminProviderDetail({ provider }: { provider: CatererAccount }) {
+export function AdminProviderDetail({ id }: { id: string }) {
+	const detail = useApi((signal) => adminApi.provider(id, signal), [id]);
 	const [isSuspendModalOpen, setIsSuspendModalOpen] = useState(false);
-	const [isSuspended, setIsSuspended] = useState(provider.isSuspended ?? false);
-	const [suspendReason, setSuspendReason] = useState<string | null>(null);
+	const [actionError, setActionError] = useState<unknown>(null);
 
+	if (!detail.data) {
+		return (
+			<div className="mx-auto w-full max-w-5xl">
+				<QueryState loading={detail.loading} error={detail.error} onRetry={detail.reload} label="Loading caterer…" />
+			</div>
+		);
+	}
+
+	const provider = toProviderView(detail.data);
+	const isSuspended = provider.isSuspended;
+	const suspendReason = detail.data.suspension_reason || null;
 	const tradingTerms = provider.tradingTerms;
-	const menuCategories = provider.menuCategories || [];
-	const ordersList = provider.ordersList || [];
+	const menuCategories = provider.menuCategories;
+	const ordersList = provider.ordersList;
+
+	const reinstate = async () => {
+		setActionError(null);
+		try {
+			await adminApi.reinstateProvider(id);
+			detail.reload();
+		} catch (error) {
+			setActionError(error);
+		}
+	};
 
 	return (
 		<div className="mx-auto w-full max-w-5xl space-y-6 pb-16 font-sans">
@@ -42,15 +66,11 @@ export function AdminProviderDetail({ provider }: { provider: CatererAccount }) 
 				<div className="flex flex-col sm:flex-row sm:items-start justify-between gap-4">
 					{/* Left: Avatar + Title + Badges + Owner info + Description */}
 					<div className="flex items-start gap-4">
-						<div className="relative size-14 rounded-lg overflow-hidden shrink-0 border border-[#EFECE6] dark:border-stone-700 bg-stone-100 shadow-2xs">
-							<Image
-								src={provider.imageSrc}
-								alt={provider.name}
-								fill
-								className="object-cover"
-								sizes="56px"
-							/>
-						</div>
+						<MediaThumb
+							src={provider.imageSrc}
+							label={provider.name}
+							className="size-14 rounded-lg"
+						/>
 
 						<div className="space-y-1">
 							<div className="flex items-center gap-2.5 flex-wrap">
@@ -117,7 +137,7 @@ export function AdminProviderDetail({ provider }: { provider: CatererAccount }) 
 							Phone
 						</div>
 						<div className="font-bold text-sm md:text-[15px] text-[#1C1917] dark:text-stone-100">
-							{provider.phone || "+961 3 991 204"}
+							{provider.phone || "—"}
 						</div>
 					</div>
 
@@ -128,7 +148,7 @@ export function AdminProviderDetail({ provider }: { provider: CatererAccount }) 
 							Sign-in email
 						</div>
 						<div className="font-bold text-sm md:text-[15px] text-[#1C1917] dark:text-stone-100 break-all">
-							{provider.email || "kitchen@yummy.example"}
+							{provider.email || "—"}
 						</div>
 					</div>
 
@@ -139,7 +159,7 @@ export function AdminProviderDetail({ provider }: { provider: CatererAccount }) 
 							Based in
 						</div>
 						<div className="font-bold text-sm md:text-[15px] text-[#1C1917] dark:text-stone-100">
-							{provider.city || "Beirut"}
+							{provider.city || "—"}
 						</div>
 					</div>
 				</div>
@@ -179,10 +199,10 @@ export function AdminProviderDetail({ provider }: { provider: CatererAccount }) 
 						Acceptance rate
 					</div>
 					<div className="text-3xl sm:text-[34px] font-bold tracking-tight text-[#1C1917] dark:text-stone-50">
-						{provider.acceptanceRate || "100%"}
+						{provider.acceptanceRate}
 					</div>
 					<div className="text-xs font-normal text-[#78716C] dark:text-stone-400">
-						{provider.acceptanceDecisions ?? 1} decisions
+						{provider.acceptanceDecisions} decisions
 					</div>
 				</div>
 
@@ -192,7 +212,7 @@ export function AdminProviderDetail({ provider }: { provider: CatererAccount }) 
 						Menu items
 					</div>
 					<div className="text-3xl sm:text-[34px] font-bold tracking-tight text-[#1C1917] dark:text-stone-50">
-						{provider.menuItemsCount || 8}
+						{provider.menuItemsCount}
 					</div>
 					<div className="text-xs font-normal text-[#78716C] dark:text-stone-400">
 						Published to hosts
@@ -301,7 +321,7 @@ export function AdminProviderDetail({ provider }: { provider: CatererAccount }) 
 			{menuCategories.length > 0 ? (
 				<div className="rounded-2xl border border-[#EFECE6] dark:border-stone-800 bg-white dark:bg-stone-900/60 shadow-[0_1px_3px_0_rgba(0,0,0,0.02)] overflow-hidden">
 					<div className="bg-[#F8F4EE] dark:bg-stone-800/70 border-b border-[#EFECE6] dark:border-stone-800 px-5 py-3.5 text-xs font-semibold text-[#78716C] dark:text-stone-400">
-						Menu and pricing · {provider.menuItemsCount || 8} items · {provider.priceRange || "$2.50–$24 per guest"}
+						Menu and pricing · {provider.menuItemsCount} items{provider.priceRange ? ` · ${provider.priceRange}` : ""}
 					</div>
 
 					<div className="p-5 md:p-6 space-y-6">
@@ -319,15 +339,12 @@ export function AdminProviderDetail({ provider }: { provider: CatererAccount }) 
 										>
 											{/* Left: Thumbnail & text */}
 											<div className="flex items-center gap-3.5">
-												<div className="relative size-12 rounded-lg overflow-hidden shrink-0 border border-[#EFECE6] dark:border-stone-700 bg-stone-100 shadow-2xs">
-													<Image
-														src={item.imageSrc}
-														alt={item.name}
-														fill
-														className="object-cover"
-														sizes="48px"
-													/>
-												</div>
+												<MediaThumb
+													src={item.imageSrc}
+													label={item.name}
+													sizes="48px"
+													className="size-12 rounded-lg"
+												/>
 
 												<div className="space-y-0.5">
 													<div className="font-bold text-sm text-[#1C1917] dark:text-stone-100">
@@ -372,15 +389,13 @@ export function AdminProviderDetail({ provider }: { provider: CatererAccount }) 
 							>
 								{/* Left: Thumbnail & Details */}
 								<div className="flex items-center gap-3.5">
-									<div className="relative size-12 rounded-lg overflow-hidden shrink-0 border border-[#EFECE6] dark:border-stone-700 bg-stone-100 shadow-2xs">
-										<Image
-											src={ord.imageSrc}
-											alt={ord.eventName}
-											fill
-											className="object-cover"
-											sizes="48px"
-										/>
-									</div>
+									<MediaThumb
+										src={null}
+										fallbackSrc={ord.imageSrc}
+										label={ord.eventName}
+										sizes="48px"
+										className="size-12 rounded-lg"
+									/>
 
 									<div className="space-y-0.5">
 										<div className="font-bold text-sm text-[#1C1917] dark:text-stone-100">
@@ -395,19 +410,7 @@ export function AdminProviderDetail({ provider }: { provider: CatererAccount }) 
 								{/* Right: Badge & Price */}
 								<div className="flex items-center justify-between sm:justify-end gap-6 shrink-0 pl-16 sm:pl-0">
 									<div>
-										{ord.status === "Awaiting response" ? (
-											<span className="inline-flex items-center rounded-full bg-[#FCF4E7] dark:bg-amber-950/50 px-2.5 py-0.5 text-xs font-semibold text-[#915B1E] dark:text-amber-300">
-												Awaiting response
-											</span>
-										) : ord.status === "On the way" ? (
-											<span className="inline-flex items-center rounded-full bg-[#EAF5EC] dark:bg-emerald-950/50 px-2.5 py-0.5 text-xs font-semibold text-[#2D6A42] dark:text-emerald-300">
-												On the way
-											</span>
-										) : (
-											<span className="inline-flex items-center rounded-full bg-[#F3F0EC] dark:bg-stone-800 px-2.5 py-0.5 text-xs font-semibold text-[#666059] dark:text-stone-300">
-												{ord.status}
-											</span>
-										)}
+										<OrderStatusPill status={ord.status} />
 									</div>
 
 									<div className="font-bold text-sm md:text-base text-[#1C1917] dark:text-stone-100 text-right min-w-[60px]">
@@ -420,6 +423,8 @@ export function AdminProviderDetail({ provider }: { provider: CatererAccount }) 
 				</div>
 			) : null}
 
+			<FormError error={actionError} />
+
 			{/* Suspend Footer */}
 			<div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pt-2">
 				<p className="text-xs text-[#78716C] dark:text-stone-400 max-w-xl leading-relaxed">
@@ -430,10 +435,7 @@ export function AdminProviderDetail({ provider }: { provider: CatererAccount }) 
 				{isSuspended ? (
 					<button
 						type="button"
-						onClick={() => {
-							setIsSuspended(false);
-							setSuspendReason(null);
-						}}
+						onClick={reinstate}
 						className="rounded-full border border-[#EFECE6] dark:border-stone-800 bg-white dark:bg-stone-900 px-5 py-2 text-xs font-semibold text-[#1C1917] dark:text-stone-100 hover:bg-stone-50 dark:hover:bg-stone-800 transition-colors self-start sm:self-auto cursor-pointer shadow-2xs"
 					>
 						Reinstate provider
@@ -454,9 +456,9 @@ export function AdminProviderDetail({ provider }: { provider: CatererAccount }) 
 				onOpenChange={setIsSuspendModalOpen}
 				providerName={provider.name}
 				liveOrdersCount={provider.liveOrders}
-				onConfirm={(reason) => {
-					setIsSuspended(true);
-					setSuspendReason(reason);
+				onConfirm={async (reason) => {
+					await adminApi.suspendProvider(id, reason);
+					detail.reload();
 				}}
 			/>
 		</div>

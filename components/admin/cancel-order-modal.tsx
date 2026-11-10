@@ -9,6 +9,7 @@ import {
 	DialogTitle,
 } from "@/components/ui/dialog";
 import { cn } from "@/lib/utils";
+import { FormError } from "@/components/form-error";
 
 const CANCEL_REASONS = [
 	"Caterer unreachable — no reply to the request",
@@ -25,7 +26,7 @@ export interface CancelOrderModalProps {
 	orderCode?: string;
 	catererName?: string;
 	customerName?: string;
-	onConfirm?: (reason: string) => void;
+	onConfirm?: (reason: string) => void | Promise<void>;
 }
 
 export function CancelOrderModal({
@@ -38,6 +39,8 @@ export function CancelOrderModal({
 }: CancelOrderModalProps) {
 	const [selectedReason, setSelectedReason] = useState<string>("");
 	const [customReason, setCustomReason] = useState<string>("");
+	const [busy, setBusy] = useState(false);
+	const [error, setError] = useState<unknown>(null);
 
 	const handleClose = () => {
 		setSelectedReason("");
@@ -45,16 +48,24 @@ export function CancelOrderModal({
 		onOpenChange(false);
 	};
 
-	const handleConfirm = () => {
+	const handleConfirm = async () => {
 		const finalReason =
 			selectedReason === "Another reason"
 				? customReason.trim() || "Another reason"
 				: selectedReason || "Order cancelled by platform";
 
-		onConfirm?.(finalReason);
-		setSelectedReason("");
-		setCustomReason("");
-		onOpenChange(false);
+		setBusy(true);
+		setError(null);
+		try {
+			await onConfirm?.(finalReason);
+			setSelectedReason("");
+			setCustomReason("");
+			onOpenChange(false);
+		} catch (e) {
+			setError(e);
+		} finally {
+			setBusy(false);
+		}
 	};
 
 	const isSubmitDisabled =
@@ -118,11 +129,13 @@ export function CancelOrderModal({
 					</div>
 				</div>
 
+				<FormError error={error} />
+
 				<div className="flex items-center gap-3 pt-2">
 					<button
 						type="button"
 						onClick={handleConfirm}
-						disabled={isSubmitDisabled}
+						disabled={isSubmitDisabled || busy}
 						className={cn(
 							"rounded-2xl border px-5 py-2.5 text-sm font-semibold transition-all shadow-2xs",
 							isSubmitDisabled

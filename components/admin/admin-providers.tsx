@@ -1,44 +1,43 @@
 "use client";
 
-import { useState, useMemo } from "react";
-import Image from "next/image";
+import { useState } from "react";
 import Link from "next/link";
 import { StarIcon } from "@phosphor-icons/react";
 import { cn } from "@/lib/utils";
+import { MediaThumb } from "@/components/media-thumb";
+import { QueryState } from "@/components/form-error";
+import { ReviewApplicationDialog } from "@/components/admin/review-application-dialog";
+import { useApi, useDebounced } from "@/hooks/use-api";
 import {
-	adminPendingApprovals,
-	adminCatererProviders,
-	type CatererAccount,
-} from "@/lib/mock-data";
+	adminApi,
+	type AdminProvider,
+	type PendingApplication,
+} from "@/lib/api/admin";
+import { guestRange, joinParts, requestStatusMeta, servicesLabel } from "@/lib/format";
 
 export function AdminProviders() {
 	const [searchQuery, setSearchQuery] = useState("");
 	const [statusFilter, setStatusFilter] = useState<"all" | "active" | "suspended">("all");
+	const [reviewing, setReviewing] = useState<PendingApplication | null>(null);
+	const q = useDebounced(searchQuery.trim());
 
-	const activeCount = adminCatererProviders.filter((p) => !p.isSuspended).length;
-	const suspendedCount = adminCatererProviders.filter((p) => p.isSuspended).length;
-	const allCount = adminCatererProviders.length;
+	const providers = useApi(
+		(signal) => adminApi.providers({ status: statusFilter, q, page_size: 100 }, signal),
+		[statusFilter, q],
+	);
+	const applications = useApi((signal) => adminApi.applications(signal), []);
 
-	const filteredProviders = useMemo(() => {
-		return adminCatererProviders.filter((provider) => {
-			const matchesStatus =
-				statusFilter === "all" ||
-				(statusFilter === "active" && !provider.isSuspended) ||
-				(statusFilter === "suspended" && provider.isSuspended);
+	const counts = providers.data?.counts ?? { all: 0, active: 0, suspended: 0 };
+	const activeCount = counts.active;
+	const suspendedCount = counts.suspended;
+	const allCount = counts.all;
+	const filteredProviders: AdminProvider[] = providers.data?.results ?? [];
+	const pendingApprovals = applications.data ?? [];
 
-			const q = searchQuery.toLowerCase().trim();
-			const matchesSearch =
-				!q ||
-				provider.name.toLowerCase().includes(q) ||
-				provider.category.toLowerCase().includes(q) ||
-				(provider.ownerName && provider.ownerName.toLowerCase().includes(q)) ||
-				(provider.city && provider.city.toLowerCase().includes(q)) ||
-				(provider.phone && provider.phone.toLowerCase().includes(q)) ||
-				(provider.email && provider.email.toLowerCase().includes(q));
-
-			return matchesStatus && matchesSearch;
-		});
-	}, [searchQuery, statusFilter]);
+	const afterReview = () => {
+		applications.reload();
+		providers.reload();
+	};
 
 	return (
 		<div className="mx-auto w-full max-w-5xl space-y-7 pb-12 font-sans">
@@ -48,32 +47,35 @@ export function AdminProviders() {
 					Pending approvals
 				</h2>
 
-				{adminPendingApprovals.map((item) => (
+				{pendingApprovals.length === 0 && !applications.loading && !applications.error ? (
+					<p className="text-sm text-[#78716C] dark:text-stone-400">
+						No applications are waiting for review.
+					</p>
+				) : null}
+				<QueryState loading={applications.loading && !applications.data} error={applications.error} onRetry={applications.reload} />
+
+				{pendingApprovals.map((item) => (
 					<div
 						key={item.id}
 						className="rounded-2xl border border-[#EFECE6] dark:border-stone-800 bg-white dark:bg-stone-900/60 p-5 md:p-6 shadow-[0_1px_3px_0_rgba(0,0,0,0.02)] flex flex-col sm:flex-row sm:items-center justify-between gap-4"
 					>
 						{/* Left: Thumbnail & Details */}
 						<div className="flex items-center gap-4">
-							<div className="relative size-14 rounded-lg overflow-hidden shrink-0 border border-[#EFECE6] dark:border-stone-700 bg-stone-100 shadow-2xs">
-								<Image
-									src={item.imageSrc}
-									alt={item.name}
-									fill
-									className="object-cover"
-									sizes="56px"
-								/>
-							</div>
+							<MediaThumb
+								src={null}
+								label={item.business_name}
+								className="size-14 rounded-lg"
+							/>
 
 							<div className="space-y-0.5">
 								<div className="font-bold text-base md:text-lg text-[#1C1917] dark:text-stone-100">
-									{item.name}
+									{item.business_name}
 								</div>
 								<div className="text-xs md:text-sm text-[#78716C] dark:text-stone-400">
-									{item.category} · {item.city} · {item.phone}
+									{joinParts([servicesLabel(item.service_types), item.city, item.phone])}
 								</div>
 								<div className="text-xs text-[#78716C] dark:text-stone-400">
-									{item.menuItemsToReview} menu items to review
+									Takes {guestRange(item.smallest_order, item.largest_order)}
 								</div>
 							</div>
 						</div>
@@ -82,6 +84,7 @@ export function AdminProviders() {
 						<div>
 							<button
 								type="button"
+								onClick={() => setReviewing(item)}
 								className="rounded-full bg-[#8B351F] hover:bg-[#732915] text-white px-5 py-2.5 text-xs sm:text-sm font-semibold transition-colors cursor-pointer shadow-xs"
 							>
 								Review application
@@ -183,7 +186,22 @@ export function AdminProviders() {
 							</thead>
 
 							<tbody className="divide-y divide-[#F5F2EC] dark:divide-stone-800/80">
-								{filteredProviders.length === 0 ? (
+								{providers.loading && !providers.data ? (
+									<tr>
+										<td colSpan={5} className="py-12 text-center text-sm text-[#78716C] dark:text-stone-400">
+											Loading caterers…
+										</td>
+									</tr>
+								) : providers.error ? (
+									<tr>
+										<td colSpan={5} className="py-12 text-center text-sm text-[#B83E28]">
+											{providers.error.message}{" "}
+											<button type="button" onClick={providers.reload} className="underline cursor-pointer">
+												Try again
+											</button>
+										</td>
+									</tr>
+								) : filteredProviders.length === 0 ? (
 									<tr>
 										<td
 											colSpan={5}
@@ -201,28 +219,25 @@ export function AdminProviders() {
 											{/* Column 1: Providers (Thumbnail, Name, Rating & Category) */}
 											<td className="py-3.5 px-5">
 												<div className="flex items-center gap-3.5">
-													<div className="relative size-12 rounded-lg overflow-hidden shrink-0 border border-[#EFECE6] dark:border-stone-700 bg-stone-100 shadow-2xs">
-														<Image
-															src={provider.imageSrc}
-															alt={provider.name}
-															fill
-															className="object-cover"
-															sizes="48px"
-														/>
-													</div>
+													<MediaThumb
+														src={provider.cover_image ?? provider.logo}
+														label={provider.business_name}
+														sizes="48px"
+														className="size-12 rounded-lg"
+													/>
 
 													<div className="space-y-0.5">
 														<div className="font-bold text-sm md:text-[15px] text-[#8B351F] hover:underline cursor-pointer">
 															<Link href={`/admin/providers/${provider.id}`}>
-																{provider.name}
+																{provider.business_name}
 															</Link>
 														</div>
 														<div className="flex items-center gap-1 text-xs text-[#78716C] dark:text-stone-400">
 															<StarIcon weight="fill" className="size-3 text-amber-500 inline" />
-															<span>{provider.rating}</span>
+															<span>{Number(provider.rating_avg).toFixed(1)}</span>
 															<span>·</span>
-															<span>{provider.category}</span>
-															{provider.isSuspended && (
+															<span>{servicesLabel(provider.service_types)}</span>
+															{provider.is_suspended && (
 																<span className="inline-flex items-center rounded-full bg-[#FDF0ED] dark:bg-red-950/50 px-2 py-0.5 text-[11px] font-semibold text-[#B83E28] dark:text-red-400 ml-1.5">
 																	Suspended
 																</span>
@@ -234,16 +249,22 @@ export function AdminProviders() {
 
 											{/* Column 2: Capacity */}
 											<td className="py-3.5 px-5 text-xs md:text-sm font-medium text-[#1C1917] dark:text-stone-200">
-												{provider.capacity}
+												{guestRange(provider.smallest_order, provider.largest_order)}
 											</td>
 
 											{/* Column 3: Taking requests */}
 											<td className="py-3.5 px-5">
+												{(() => {
+													const requestStatus = requestStatusMeta(
+														provider.request_mode,
+														provider.order_notice_period,
+													);
+													return (
 												<div className="space-y-0.5">
 													<div
 														className={cn(
 															"text-xs md:text-sm font-semibold flex items-center gap-1.5",
-															provider.requestStatus.color === "green"
+															requestStatus.color === "green"
 																? "text-[#1C1917] dark:text-stone-100"
 																: "text-[#B83E28] dark:text-red-400"
 														)}
@@ -251,28 +272,30 @@ export function AdminProviders() {
 														<span
 															className={cn(
 																"size-2 rounded-full inline-block shrink-0",
-																provider.requestStatus.color === "green"
+																requestStatus.color === "green"
 																	? "bg-[#2D6A42]"
 																	: "bg-[#B83E28]"
 															)}
 														/>
-														{provider.requestStatus.label}
+														{requestStatus.label}
 													</div>
 													<div className="text-xs text-[#78716C] dark:text-stone-400 pl-3.5">
-														{provider.requestStatus.subtext}
+														{requestStatus.subtext}
 													</div>
 												</div>
+													);
+												})()}
 											</td>
 
 											{/* Column 4: Orders */}
 											<td className="py-3.5 px-5">
-												{provider.liveOrders > 0 || provider.deliveredOrders > 0 ? (
+												{provider.live_orders > 0 || provider.delivered_orders > 0 ? (
 													<div className="space-y-0.5">
 														<div className="font-bold text-xs md:text-sm text-[#1C1917] dark:text-stone-100">
-															{provider.liveOrders} live
+															{provider.live_orders} live
 														</div>
 														<div className="text-xs text-[#78716C] dark:text-stone-400">
-															{provider.deliveredOrders} delivered
+															{provider.delivered_orders} delivered
 														</div>
 													</div>
 												) : (
@@ -299,6 +322,14 @@ export function AdminProviders() {
 					</div>
 				</div>
 			</section>
+
+			<ReviewApplicationDialog
+				application={reviewing}
+				onOpenChange={(open) => {
+					if (!open) setReviewing(null);
+				}}
+				onDone={afterReview}
+			/>
 		</div>
 	);
 }
