@@ -1,6 +1,5 @@
 "use client";
 
-import Image from "next/image";
 import Link from "next/link";
 import {
 	MoneyIcon,
@@ -11,20 +10,88 @@ import {
 	ArrowRightIcon,
 } from "@phosphor-icons/react";
 import { cn } from "@/lib/utils";
-import {
-	adminPlatformFinances,
-	adminOrderStages,
-	adminOrdersInProgress,
-	adminUpcomingSevenDays,
-	type FinancialMetric,
-} from "@/lib/mock-data";
+import { MediaThumb } from "@/components/media-thumb";
+import { QueryState } from "@/components/form-error";
+import { useApi } from "@/hooks/use-api";
+import { adminApi, type Overview } from "@/lib/api/admin";
+import { dayMonth, joinParts, money, occasionImage, pluralize, timeLabel } from "@/lib/format";
+
+type FinancialMetric = {
+	id: string;
+	title: string;
+	amount: string;
+	subtext: string;
+	iconType: "cash" | "card" | "warning" | "calendar";
+	isAlert?: boolean;
+};
+
+// Colours for the pipeline bar, in the order work moves through the stages.
+const STAGE_COLORS: Record<string, string> = {
+	awaiting_reply: "#EAB308",
+	reconfirming: "#C7C2BB",
+	awaiting_call: "#E59880",
+	contacted: "#C05621",
+	preparing: "#5C2417",
+	on_the_way: "#2F7455",
+};
+
+function financeCards(money_: Overview["money"]): FinancialMetric[] {
+	return [
+		{
+			id: "cash_collect",
+			title: "Cash to collect",
+			amount: money(money_.cash_to_collect.amount),
+			subtext: `${pluralize(money_.cash_to_collect.orders, "accepted order")} · handed over on the day`,
+			iconType: "cash",
+		},
+		{
+			id: "already_paid",
+			title: "Already paid online",
+			amount: money(money_.paid_online.amount),
+			subtext: `${pluralize(money_.paid_online.orders, "order")} · paid before the day`,
+			iconType: "card",
+		},
+		{
+			id: "cash_owed",
+			title: "Delivered, cash owed",
+			amount: money(money_.cash_owed.amount),
+			subtext: `${pluralize(money_.cash_owed.orders, "order")} not settled yet`,
+			iconType: "warning",
+			isAlert: money_.cash_owed.orders > 0,
+		},
+		{
+			id: "booked_month",
+			title: "Booked this month",
+			amount: money(money_.booked_this_month.amount),
+			subtext: `Last month ${money(money_.booked_this_month.last_month)}`,
+			iconType: "calendar",
+		},
+	];
+}
+
+const EVENT_BADGE = {
+	covered: { label: "Covered", variant: "covered" as const },
+	awaiting: { label: "Awaiting caterer", variant: "awaiting" as const },
+	nofood: { label: "No food ordered", variant: "nofood" as const },
+};
 
 export function AdminOverview() {
+	const overview = useApi((signal) => adminApi.overview(signal), []);
+	const data = overview.data;
+
+	if (!data) {
+		return (
+			<div className="mx-auto w-full max-w-5xl">
+				<QueryState loading={overview.loading} error={overview.error} onRetry={overview.reload} label="Loading overview…" />
+			</div>
+		);
+	}
+
+	const adminPlatformFinances = financeCards(data.money);
+	const adminOrderStages = data.pipeline.map((stage) => ({ ...stage, color: STAGE_COLORS[stage.id] ?? "#C7C2BB" }));
 	// Total orders across all stages for the progress bar calculation
-	const totalStageOrders = adminOrderStages.reduce(
-		(sum, s) => sum + s.count,
-		0
-	);
+	const totalStageOrders = adminOrderStages.reduce((sum, s) => sum + s.count, 0);
+	const adminOrdersInProgress = data.orders_in_progress.items;
 
 	return (
 		<div className="mx-auto w-full max-w-5xl space-y-7 pb-12 font-sans">
@@ -68,7 +135,7 @@ export function AdminOverview() {
 					<div className="space-y-3.5">
 						<div className="flex h-2.5 w-full overflow-hidden rounded-full bg-[#EFECE6] dark:bg-stone-800">
 							{adminOrderStages.map((stage) => {
-								if (stage.count === 0) return null;
+								if (stage.count === 0 || totalStageOrders === 0) return null;
 								const percent = (stage.count / totalStageOrders) * 100;
 								return (
 									<div
@@ -104,16 +171,23 @@ export function AdminOverview() {
 					</div>
 
 					{/* Warning alert notice */}
-					<div className="flex items-center gap-2 pt-1 font-bold text-xs md:text-sm text-[#C53030] dark:text-red-400">
-						<ClockIcon
-							weight="bold"
-							className="size-4 shrink-0 text-[#C53030] dark:text-red-400"
-						/>
-						<span>1 with no caterer reply after 2 hours</span>
-					</div>
+					{data.overdue_replies > 0 ? (
+						<div className="flex items-center gap-2 pt-1 font-bold text-xs md:text-sm text-[#C53030] dark:text-red-400">
+							<ClockIcon
+								weight="bold"
+								className="size-4 shrink-0 text-[#C53030] dark:text-red-400"
+							/>
+							<span>{data.overdue_replies} with no caterer reply after 2 hours</span>
+						</div>
+					) : null}
 
 					{/* Orders list */}
 					<div className="divide-y divide-[#F5F2EC] dark:divide-stone-800/80">
+						{adminOrdersInProgress.length === 0 ? (
+							<p className="py-6 text-center text-sm text-[#78716C] dark:text-stone-400">
+								No orders are in progress.
+							</p>
+						) : null}
 						{adminOrdersInProgress.map((order) => (
 							<div
 								key={order.id}
@@ -122,36 +196,36 @@ export function AdminOverview() {
 								{/* Left: Customer -> Caterer & Event Details */}
 								<div className="space-y-0.5">
 									<div className="flex items-center flex-wrap gap-1 text-sm md:text-[15px] font-bold text-[#1C1917] dark:text-stone-100">
-										<span>{order.customerName}</span>
+										<span>{order.host}</span>
 										<span className="text-[#A8A29E] dark:text-stone-500 font-normal mx-0.5">
 											→
 										</span>
-										<span>{order.catererName}</span>
+										<span>{order.provider}</span>
 									</div>
 									<div className="text-xs md:text-[13px] text-[#78716C] dark:text-stone-400">
-										{order.eventName} · {order.guestCount} guests ·{" "}
-										{order.orderCode}
+										{order.title} · {order.guest_count} guests ·{" "}
+										{order.order_number}
 									</div>
 								</div>
 
 								{/* Right: Amount & Stage Information */}
 								<div className="flex items-center justify-between sm:justify-end gap-6 shrink-0">
 									<div className="font-bold text-sm md:text-base text-[#1C1917] dark:text-stone-100 sm:text-right min-w-[70px]">
-										{order.amount}
+										{money(order.total_amount)}
 									</div>
 									<div className="text-right min-w-[95px]">
 										<div className="font-medium text-xs md:text-[13px] text-[#292524] dark:text-stone-200">
-											{order.stageName}
+											{order.stage}
 										</div>
 										<div
 											className={cn(
 												"text-xs mt-0.5",
-												order.isOverdue
+												order.is_overdue
 													? "font-medium text-[#C53030] dark:text-red-400"
 													: "text-[#A8A29E] dark:text-stone-500"
 											)}
 										>
-											{order.stageDuration}
+											{order.hours_in_stage}h in this stage
 										</div>
 									</div>
 								</div>
@@ -165,7 +239,7 @@ export function AdminOverview() {
 							href="/admin/orders"
 							className="inline-flex items-center gap-1.5 font-medium text-xs md:text-sm text-[#9C412B] hover:text-[#7C2D12] dark:text-orange-400 dark:hover:text-orange-300 transition-colors"
 						>
-							See all 8 orders in progress
+							See all {data.orders_in_progress.total} orders in progress
 							<span className="text-xs">→</span>
 						</Link>
 					</div>
@@ -188,43 +262,46 @@ export function AdminOverview() {
 				</div>
 
 				<div className="rounded-2xl border border-[#EFECE6] dark:border-stone-800 bg-white dark:bg-stone-900/60 p-5 md:p-6 shadow-[0_1px_3px_0_rgba(0,0,0,0.02)] divide-y divide-[#F5F2EC] dark:divide-stone-800/80">
-					{adminUpcomingSevenDays.map((event) => (
+					{data.upcoming_seven_days.length === 0 ? (
+						<p className="py-6 text-center text-sm text-[#78716C] dark:text-stone-400">
+							No occasions in the next seven days.
+						</p>
+					) : null}
+					{data.upcoming_seven_days.map((event) => (
 						<div
 							key={event.id}
 							className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 py-4 first:pt-1 last:pb-1"
 						>
 							{/* Left: Thumbnail, Date/Time, Event Info */}
 							<div className="flex items-center gap-4">
-								<div className="relative h-12 w-16 sm:h-14 sm:w-18 overflow-hidden rounded-lg shrink-0 border border-[#EFECE6] dark:border-stone-700 bg-stone-100 shadow-2xs">
-									<Image
-										src={event.imageSrc}
-										alt={event.eventName}
-										fill
-										className="object-cover"
-										sizes="72px"
-									/>
-								</div>
+								<MediaThumb
+									src={null}
+									fallbackSrc={occasionImage(event.meal_type)}
+									label={event.title}
+									sizes="72px"
+									className="h-12 w-16 sm:h-14 sm:w-18 rounded-lg"
+								/>
 
 								<div className="shrink-0 min-w-[62px]">
 									<div className="font-bold text-xs md:text-sm text-[#1C1917] dark:text-stone-100">
-										{event.date}
+										{dayMonth(event.event_date)}
 									</div>
 									<div className="text-xs text-[#78716C] dark:text-stone-400">
-										{event.time}
+										{timeLabel(event.start_time)}
 									</div>
 								</div>
 
 								<div className="space-y-0.5">
 									<div className="text-xs md:text-sm">
 										<span className="font-bold text-[#1C1917] dark:text-stone-100">
-											{event.eventName}
+											{event.title}
 										</span>
 										<span className="text-[#A8A29E] dark:text-stone-400 font-normal ml-2">
-											{event.customerName}
+											{event.host}
 										</span>
 									</div>
 									<div className="text-xs text-[#78716C] dark:text-stone-400">
-										{event.details}
+										{joinParts([event.meal_type, event.guests != null ? `${event.guests} guests` : "", event.caterers.length ? event.caterers.join(", ") : "No caterer yet"])}
 									</div>
 								</div>
 							</div>
@@ -232,12 +309,12 @@ export function AdminOverview() {
 							{/* Right: Price & Status Badge */}
 							<div className="flex items-center justify-between sm:justify-end gap-6 shrink-0 pl-20 sm:pl-0">
 								<div className="font-bold text-xs sm:text-sm text-[#1C1917] dark:text-stone-100 sm:text-right min-w-[50px]">
-									{event.amount}
+									{event.state === "nofood" ? "—" : money(event.amount)}
 								</div>
 								<div className="min-w-[125px] text-right">
 									<EventStatusBadge
-										label={event.statusBadge.label}
-										variant={event.statusBadge.variant}
+										label={EVENT_BADGE[event.state].label}
+										variant={EVENT_BADGE[event.state].variant}
 									/>
 								</div>
 							</div>

@@ -198,6 +198,71 @@ export type OrderList = Paginated<AdminOrderRow> & {
 	counts: Record<OrderTab, number>
 }
 
+export type Overview = {
+	money: {
+		cash_to_collect: { amount: string; orders: number }
+		paid_online: { amount: string; orders: number }
+		cash_owed: { amount: string; orders: number }
+		booked_this_month: { amount: string; last_month: string }
+	}
+	pipeline: Array<{ id: string; label: string; count: number }>
+	overdue_replies: number
+	orders_in_progress: {
+		total: number
+		items: Array<{
+			id: string
+			order_number: string
+			host: string
+			provider: string
+			title: string
+			guest_count: number
+			total_amount: string
+			stage: string
+			status: string
+			hours_in_stage: number
+			is_overdue: boolean
+		}>
+	}
+	upcoming_seven_days: Array<{
+		id: string
+		title: string
+		meal_type: string
+		event_date: string
+		start_time: string | null
+		guests: number | null
+		host: string
+		caterers: string[]
+		amount: string | number
+		state: "covered" | "awaiting" | "nofood"
+	}>
+}
+
+export type DeliveryAttempt = {
+	channel: "push" | "whatsapp" | "sms"
+	status: "queued" | "delivered" | "failed"
+	error: string
+	created_at: string
+}
+
+export type DeliveryItem = {
+	id: string
+	type: string
+	title: string
+	body: string
+	delivery_state: "sending" | "first_try" | "backup" | "failed"
+	created_at: string
+	recipient: { id: string; name: string; role: string }
+	attempts: DeliveryAttempt[]
+}
+
+export type NotificationDelivery = {
+	days: number
+	summary: { total: number; first_try: number; backup: number; failed: number; sending: number }
+	never_arrived: DeliveryItem[]
+	needed_backup: DeliveryItem[]
+	still_sending: DeliveryItem[]
+}
+
 export const adminApi = {
 	providers: (
 		query: { status?: string; q?: string; page?: number; page_size?: number },
@@ -226,6 +291,9 @@ export const adminApi = {
 		get<AdminOrderDetail>(`/admin/orders/${id}/`, undefined, signal),
 	cancelOrder: (id: string, reason: string) =>
 		post<AdminOrderDetail>(`/admin/orders/${id}/cancel/`, { reason }),
+	overview: (signal?: AbortSignal) => get<Overview>("/admin/overview/", undefined, signal),
+	notificationDelivery: (days = 7, signal?: AbortSignal) =>
+		get<NotificationDelivery>("/admin/notification-delivery/", { days }, signal),
 	applications: (signal?: AbortSignal) =>
 		get<PendingApplication[]>("/admin/providers/applications/", undefined, signal),
 	approveApplication: (id: string) =>
