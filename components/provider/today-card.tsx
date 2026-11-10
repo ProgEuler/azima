@@ -1,6 +1,6 @@
 "use client"
 
-import { useEffect, useState } from "react"
+import { useState } from "react"
 import {
    Briefcase,
    Calendar,
@@ -19,8 +19,6 @@ import { Button } from "@/components/event-manager/ui/button"
 import { Badge } from "@/components/event-manager/ui/badge"
 import { cn } from "@/lib/utils"
 import type { Event } from "@/components/event-manager"
-
-const STORAGE_KEY = "today-card-status"
 
 const isSameDay = (a: Date, b: Date) =>
    a.getFullYear() === b.getFullYear() &&
@@ -42,41 +40,38 @@ const formatCash = (n: number) =>
 
 export interface TodayCardProps {
    events: Event[]
+   /** True when today is closed to new requests. */
+   closed: boolean
+   /** Close or re-open today. Rejects with an error the card shows. */
+   onToggleClosed: () => Promise<void>
    date?: Date
    className?: string
 }
 
 export function TodayCard({
    events,
+   closed,
+   onToggleClosed,
    date = new Date(),
    className,
 }: TodayCardProps) {
-   const [isOpen, setIsOpen] = useState(true)
-   const [hydrated, setHydrated] = useState(false)
+   const [busy, setBusy] = useState(false)
+   const [error, setError] = useState<string | null>(null)
 
-   // Hydrate from localStorage on mount
-   useEffect(() => {
-      const stored =
-         typeof window !== "undefined"
-            ? window.localStorage.getItem(STORAGE_KEY)
-            : null
-      if (stored === "open" || stored === "closed") {
-         setIsOpen(stored === "open")
+   const toggle = async () => {
+      setBusy(true)
+      setError(null)
+      try {
+         await onToggleClosed()
+      } catch (e) {
+         setError(e instanceof Error ? e.message : "Could not update the date.")
+      } finally {
+         setBusy(false)
       }
-      setHydrated(true)
-   }, [])
-
-   const toggle = () => {
-      setIsOpen((prev) => {
-         const next = !prev
-         if (typeof window !== "undefined") {
-            window.localStorage.setItem(STORAGE_KEY, next ? "open" : "closed")
-         }
-         return next
-      })
    }
 
    const todayEvents = events
+      .filter((e) => e.category !== "Closed")
       .filter((e) => isSameDay(new Date(e.startTime), date))
       .sort((a, b) => a.startTime.getTime() - b.startTime.getTime())
 
@@ -99,9 +94,7 @@ export function TodayCard({
       year: "numeric",
    })
 
-   // Avoid hydration mismatch on the toggle label/badge — render a stable placeholder
-   // until we've read localStorage.
-   const showOpen = hydrated ? isOpen : true
+   const showOpen = !closed
 
    return (
       <Card className={cn("flex flex-col", className)}>
@@ -152,7 +145,8 @@ export function TodayCard({
 
             <Button
                type="button"
-               onClick={toggle}
+               onClick={() => void toggle()}
+               disabled={busy}
                variant={showOpen ? "outline" : "default"}
                className="w-full"
             >
@@ -169,9 +163,15 @@ export function TodayCard({
                )}
             </Button>
 
+            {error ? (
+               <p role="alert" className="text-xs text-destructive">
+                  {error}
+               </p>
+            ) : null}
+
             <div className="flex flex-col gap-2">
                <div className="flex items-center justify-between">
-                  <h4 className="text-sm font-semibold">Today's bookings</h4>
+                  <h4 className="text-sm font-semibold">Today&apos;s bookings</h4>
                   <span className="text-xs text-muted-foreground">
                      {bookedJobs}
                   </span>

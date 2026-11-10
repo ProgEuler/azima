@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useCallback, useMemo } from "react"
+import { useState, useCallback, useEffect, useMemo } from "react"
 import { Button } from "@/components/event-manager/ui/button"
 import { Card } from "@/components/event-manager/ui/card"
 import { Input } from "@/components/event-manager/ui/input"
@@ -39,6 +39,8 @@ export interface Event {
   tags?: string[]
   guestCount?: number
   cashAmount?: number
+  /** Opaque payload for hosts of the calendar (e.g. the order behind a booking). */
+  data?: unknown
 }
 
 export interface EventManagerProps {
@@ -51,6 +53,12 @@ export interface EventManagerProps {
   defaultView?: "month" | "week" | "day" | "list"
   className?: string
   availableTags?: string[]
+  /** Events come from the parent only: no editing, dragging or deleting. */
+  readOnly?: boolean
+  /** Fires when the visible date range changes so the parent can load it. */
+  onVisibleRangeChange?: (start: Date, end: Date) => void
+  /** Replaces the edit form in the dialog (used with readOnly). */
+  renderEventDetails?: (event: Event, close: () => void) => React.ReactNode
 }
 
 const defaultColors = [
@@ -67,13 +75,17 @@ export function EventManager({
   onEventCreate,
   onEventUpdate,
   onEventDelete,
+  readOnly = false,
+  onVisibleRangeChange,
+  renderEventDetails,
   categories = ["Meeting", "Task", "Reminder", "Personal"],
   colors = defaultColors,
   defaultView = "month",
   className,
   availableTags = ["Important", "Urgent", "Work", "Personal", "Team", "Client"],
 }: EventManagerProps) {
-  const [events, setEvents] = useState<Event[]>(initialEvents)
+  const [localEvents, setEvents] = useState<Event[]>(initialEvents)
+  const events = readOnly ? initialEvents : localEvents
   const [currentDate, setCurrentDate] = useState(new Date())
   const [view, setView] = useState<"month" | "week" | "day" | "list">(defaultView)
   const [selectedEvent, setSelectedEvent] = useState<Event | null>(null)
@@ -184,8 +196,9 @@ export function EventManager({
   )
 
   const handleDragStart = useCallback((event: Event) => {
+    if (readOnly) return
     setDraggedEvent(event)
-  }, [])
+  }, [readOnly])
 
   const handleDragEnd = useCallback(() => {
     setDraggedEvent(null)
@@ -231,6 +244,25 @@ export function EventManager({
     },
     [view],
   )
+
+  // Tell the parent which dates are on screen so it can load them.
+  useEffect(() => {
+    if (!onVisibleRangeChange) return
+    const first = new Date(currentDate.getFullYear(), currentDate.getMonth(), 1)
+    const last = new Date(currentDate.getFullYear(), currentDate.getMonth() + 1, 0)
+    if (view === "month") {
+      // The month grid shows leading/trailing days of neighbouring months.
+      first.setDate(first.getDate() - 7)
+      last.setDate(last.getDate() + 7)
+    } else {
+      first.setTime(currentDate.getTime())
+      first.setDate(first.getDate() - 7)
+      last.setTime(currentDate.getTime())
+      last.setDate(last.getDate() + 7)
+    }
+    onVisibleRangeChange(first, last)
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [currentDate, view])
 
   const getColorClasses = useCallback(
     (colorValue: string) => {
@@ -704,6 +736,14 @@ export function EventManager({
 
       {/* Event Dialog */}
       <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
+        {renderEventDetails && selectedEvent ? (
+        <DialogContent className="max-w-md max-h-[90vh] overflow-y-auto">
+          {renderEventDetails(selectedEvent, () => {
+            setIsDialogOpen(false)
+            setSelectedEvent(null)
+          })}
+        </DialogContent>
+        ) : (
         <DialogContent className="max-w-md max-h-[90vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle>{isCreating ? "Create Event" : "Event Details"}</DialogTitle>
@@ -895,6 +935,7 @@ export function EventManager({
             </Button>
           </DialogFooter>
         </DialogContent>
+        )}
       </Dialog>
     </div>
   )
