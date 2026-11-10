@@ -23,7 +23,8 @@ export function MediaThumb({
 	className?: string
 	priority?: boolean
 }) {
-	const resolved = mediaUrl(src) ?? fallbackSrc ?? null
+	const uploaded = mediaUrl(src)
+	const resolved = uploaded ?? fallbackSrc ?? null
 	return (
 		<div
 			className={cn(
@@ -38,6 +39,8 @@ export function MediaThumb({
 					fill
 					sizes={sizes}
 					priority={priority}
+					// Uploaded media is served by the API host; the optimizer rejects private hosts.
+					unoptimized={Boolean(uploaded)}
 					className="object-cover"
 				/>
 			) : (

@@ -164,3 +164,33 @@ export function requestStatusMeta(
 		color: "green",
 	}
 }
+
+type PaymentLike = {
+	method: string
+	method_label: string
+	status: string
+} | null
+
+/** One-line payment description: "Cash on delivery", "Paid online". */
+export function paymentMethodLabel(payment: PaymentLike): string {
+	if (!payment) return "No payment"
+	return payment.method === "online" ? "Paid online" : "Cash on delivery"
+}
+
+/** Cash-flow note for an order: whether the money has been collected. */
+export function paymentStateLabel(payment: PaymentLike): {
+	text: string
+	tone: "amber" | "green" | "red" | "neutral"
+} {
+	if (!payment) return { text: "No payment recorded", tone: "neutral" }
+	if (payment.status === "paid") {
+		return payment.method === "online"
+			? { text: "Paid online", tone: "green" }
+			: { text: "Cash collected", tone: "green" }
+	}
+	if (payment.status === "pending") return { text: "Cash not yet collected", tone: "amber" }
+	if (payment.status === "refunded" || payment.status === "partially_refunded") {
+		return { text: "Refunded", tone: "neutral" }
+	}
+	return { text: "No payment taken", tone: "neutral" }
+}
