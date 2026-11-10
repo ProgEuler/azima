@@ -1,170 +1,182 @@
 "use client"
 
+import { useCallback, useMemo, useState } from "react"
+import Link from "next/link"
 import { EventManager, type Event } from "@/components/event-manager"
 import { TodayCard } from "@/components/provider/today-card"
+import { OrderStatusPill } from "@/components/order-status-pill"
+import { Button } from "@/components/event-manager/ui/button"
+import {
+	DialogDescription,
+	DialogHeader,
+	DialogTitle,
+} from "@/components/event-manager/ui/dialog"
+import { QueryState } from "@/components/form-error"
+import { useApi } from "@/hooks/use-api"
+import { providerApi, type CloseDate, type ProviderOrder } from "@/lib/api/provider"
+import { closeDateToEvent, isoDate, orderToEvent } from "@/lib/calendar"
+import { dateLabel, money, timeLabel } from "@/lib/format"
+
+function monthRange(d = new Date()) {
+	const start = new Date(d.getFullYear(), d.getMonth(), 1)
+	start.setDate(start.getDate() - 7)
+	const end = new Date(d.getFullYear(), d.getMonth() + 1, 0)
+	end.setDate(end.getDate() + 7)
+	return { start: isoDate(start), end: isoDate(end) }
+}
 
 export default function ProviderCalendarPage() {
-  // Demo events with realistic data
-  const demoEvents: Event[] = [
-    // ---- Today's bookings (Sept 16, 2026) ----
-    {
-      id: "today-1",
-      title: "Smith Family Brunch",
-      description: "Brunch spread for the Smith family of four",
-      startTime: new Date(2026, 8, 16, 10, 0),
-      endTime: new Date(2026, 8, 16, 12, 0),
-      color: "blue",
-      category: "Booking",
-      guestCount: 4,
-      cashAmount: 180,
-      tags: ["Booking", "Brunch"],
-    },
-    {
-      id: "today-2",
-      title: "Johnson Birthday Dinner",
-      description: "Birthday dinner for Johnson's 8 guests",
-      startTime: new Date(2026, 8, 16, 13, 30),
-      endTime: new Date(2026, 8, 16, 15, 30),
-      color: "purple",
-      category: "Booking",
-      guestCount: 8,
-      cashAmount: 420,
-      tags: ["Booking", "Important"],
-    },
-    {
-      id: "today-3",
-      title: "Corporate Lunch",
-      description: "Catered lunch for the Acme team offsite",
-      startTime: new Date(2026, 8, 16, 18, 0),
-      endTime: new Date(2026, 8, 16, 20, 0),
-      color: "orange",
-      category: "Booking",
-      guestCount: 12,
-      cashAmount: 650,
-      tags: ["Booking", "Corporate"],
-    },
-    // ---- Other demo events ----
-    {
-      id: "1",
-      title: "Team Standup",
-      description: "Daily sync with the engineering team to discuss progress and blockers",
-      startTime: new Date(2025, 9, 20, 9, 0),
-      endTime: new Date(2025, 9, 20, 9, 30),
-      color: "blue",
-      category: "Meeting",
-      attendees: ["Alice", "Bob", "Charlie"],
-      tags: ["Work", "Team"],
-    },
-    {
-      id: "2",
-      title: "Product Design Review",
-      description: "Review new mockups for the dashboard redesign with stakeholders",
-      startTime: new Date(2025, 9, 20, 14, 0),
-      endTime: new Date(2025, 9, 20, 15, 30),
-      color: "purple",
-      category: "Meeting",
-      attendees: ["Sarah", "Mike"],
-      tags: ["Important", "Client"],
-    },
-    {
-      id: "3",
-      title: "Code Review",
-      description: "Review pull requests for the authentication feature",
-      startTime: new Date(2025, 9, 21, 10, 0),
-      endTime: new Date(2025, 9, 21, 11, 0),
-      color: "green",
-      category: "Task",
-      tags: ["Work", "Urgent"],
-    },
-    {
-      id: "4",
-      title: "Client Presentation",
-      description: "Present Q4 roadmap and feature updates to key stakeholders",
-      startTime: new Date(2025, 9, 22, 15, 0),
-      endTime: new Date(2025, 9, 22, 16, 30),
-      color: "orange",
-      category: "Meeting",
-      attendees: ["John", "Emma", "David"],
-      tags: ["Important", "Client"],
-    },
-    {
-      id: "5",
-      title: "Gym Session",
-      description: "Evening workout at the fitness center",
-      startTime: new Date(2025, 9, 20, 18, 0),
-      endTime: new Date(2025, 9, 20, 19, 0),
-      color: "pink",
-      category: "Personal",
-      tags: ["Personal"],
-    },
-    {
-      id: "6",
-      title: "Sprint Planning",
-      description: "Plan tasks and estimate story points for the upcoming sprint",
-      startTime: new Date(2025, 9, 23, 10, 0),
-      endTime: new Date(2025, 9, 23, 12, 0),
-      color: "blue",
-      category: "Meeting",
-      attendees: ["Team"],
-      tags: ["Work", "Team", "Important"],
-    },
-    {
-      id: "7",
-      title: "Doctor Appointment",
-      description: "Annual health checkup at City Medical Center",
-      startTime: new Date(2025, 9, 24, 11, 0),
-      endTime: new Date(2025, 9, 24, 12, 0),
-      color: "red",
-      category: "Personal",
-      tags: ["Personal", "Important"],
-    },
-    {
-      id: "8",
-      title: "Deploy to Production",
-      description: "Deploy version 2.5.0 with new features and bug fixes",
-      startTime: new Date(2025, 9, 25, 16, 0),
-      endTime: new Date(2025, 9, 25, 17, 0),
-      color: "green",
-      category: "Task",
-      tags: ["Work", "Urgent"],
-    },
-    {
-      id: "9",
-      title: "Coffee with Sarah",
-      description: "Catch up over coffee at the new cafe downtown",
-      startTime: new Date(2025, 9, 26, 15, 0),
-      endTime: new Date(2025, 9, 26, 16, 0),
-      color: "pink",
-      category: "Personal",
-      tags: ["Personal"],
-    },
-    {
-      id: "10",
-      title: "Budget Review",
-      description: "Quarterly budget review with finance team",
-      startTime: new Date(2025, 9, 27, 13, 0),
-      endTime: new Date(2025, 9, 27, 14, 30),
-      color: "orange",
-      category: "Meeting",
-      attendees: ["Finance Team"],
-      tags: ["Work", "Important"],
-    },
-  ]
+	const [range, setRange] = useState(() => monthRange())
+	const today = isoDate(new Date())
 
-  return (
-    <div className="container mx-auto grid gap-4 p-4 sm:p-6 lg:grid-cols-[1fr_340px]">
-      <EventManager
-        events={demoEvents}
-        onEventCreate={(event) => console.log("Created:", event)}
-        onEventUpdate={(id, event) => console.log("Updated:", id, event)}
-        onEventDelete={(id) => console.log("Deleted:", id)}
-        categories={["Meeting", "Task", "Reminder", "Personal", "Booking"]}
-        availableTags={["Important", "Urgent", "Work", "Personal", "Team", "Client", "Booking", "Brunch", "Corporate"]}
-        defaultView="month"
-      />
-      <div className="lg:sticky lg:top-4 lg:self-start">
-        <TodayCard events={demoEvents} />
-      </div>
-    </div>
-  )
+	const calendar = useApi(
+		(signal) => providerApi.calendar(range.start, range.end, signal),
+		[range.start, range.end],
+	)
+	const todayData = useApi((signal) => providerApi.calendar(today, today, signal), [today])
+
+	const events: Event[] = useMemo(
+		() => [
+			...(calendar.data?.events ?? []).map(orderToEvent),
+			...(calendar.data?.closed_dates ?? []).map(closeDateToEvent),
+		],
+		[calendar.data],
+	)
+	const todayEvents: Event[] = useMemo(
+		() => (todayData.data?.events ?? []).map(orderToEvent),
+		[todayData.data],
+	)
+	const closedToday: CloseDate | null =
+		todayData.data?.closed_dates.find((d) => d.date === today) ?? null
+
+	const onRange = useCallback((start: Date, end: Date) => {
+		const next = { start: isoDate(start), end: isoDate(end) }
+		setRange((prev) => (prev.start === next.start && prev.end === next.end ? prev : next))
+	}, [])
+
+	const refresh = () => {
+		calendar.reload()
+		todayData.reload()
+	}
+
+	async function toggleToday() {
+		if (closedToday) await providerApi.reopenDate(closedToday.id)
+		else await providerApi.closeDate({ date_from: today })
+		refresh()
+	}
+
+	return (
+		<div className="container mx-auto grid gap-4 p-4 sm:p-6 lg:grid-cols-[1fr_340px]">
+			<div className="space-y-3">
+				{calendar.error ? (
+					<QueryState loading={false} error={calendar.error} onRetry={calendar.reload} />
+				) : null}
+				<EventManager
+					events={events}
+					readOnly
+					onVisibleRangeChange={onRange}
+					categories={["Booking", "Request", "Closed"]}
+					availableTags={[]}
+					defaultView="month"
+					renderEventDetails={(event, close) => (
+						<EventDetails event={event} close={close} onChanged={refresh} />
+					)}
+				/>
+			</div>
+			<div className="lg:sticky lg:top-4 lg:self-start">
+				<TodayCard
+					events={todayEvents}
+					closed={Boolean(closedToday)}
+					onToggleClosed={toggleToday}
+				/>
+			</div>
+		</div>
+	)
+}
+
+function EventDetails({
+	event,
+	close,
+	onChanged,
+}: {
+	event: Event
+	close: () => void
+	onChanged: () => void
+}) {
+	if (event.category === "Closed") {
+		const closed = event.data as CloseDate
+		return (
+			<>
+				<DialogHeader>
+					<DialogTitle>Closed to new requests</DialogTitle>
+					<DialogDescription>{dateLabel(closed.date)}</DialogDescription>
+				</DialogHeader>
+				{closed.reason ? <p className="text-sm">{closed.reason}</p> : null}
+				<p className="text-xs text-muted-foreground">
+					Hosts cannot request you for this date. Orders you already accepted are not affected.
+				</p>
+				<div className="flex justify-end gap-2">
+					<Button variant="outline" onClick={close}>
+						Close
+					</Button>
+					<Button
+						onClick={async () => {
+							await providerApi.reopenDate(closed.id)
+							close()
+							onChanged()
+						}}
+					>
+						Re-open this date
+					</Button>
+				</div>
+			</>
+		)
+	}
+
+	const order = event.data as ProviderOrder
+	return (
+		<>
+			<DialogHeader>
+				<DialogTitle>{order.title || order.order_number}</DialogTitle>
+				<DialogDescription>
+					{order.order_number} · {dateLabel(order.delivery_date)} {timeLabel(order.delivery_time)}
+				</DialogDescription>
+			</DialogHeader>
+			<div className="space-y-3 text-sm">
+				<OrderStatusPill status={order.status} />
+				<dl className="grid grid-cols-[auto_1fr] gap-x-4 gap-y-1.5">
+					<dt className="text-muted-foreground">Host</dt>
+					<dd className="font-medium">{order.host.name}</dd>
+					{order.host.phone ? (
+						<>
+							<dt className="text-muted-foreground">Phone</dt>
+							<dd className="font-medium">{order.host.phone}</dd>
+						</>
+					) : null}
+					<dt className="text-muted-foreground">Guests</dt>
+					<dd className="font-medium">{order.guest_count}</dd>
+					<dt className="text-muted-foreground">Where</dt>
+					<dd className="font-medium">
+						{order.fulfillment === "pickup" ? "Host collects" : order.delivery_address}
+					</dd>
+					<dt className="text-muted-foreground">Total</dt>
+					<dd className="font-medium">
+						{money(order.total_amount)}{" "}
+						{order.payment?.method === "online" ? "paid online" : "in cash"}
+					</dd>
+				</dl>
+			</div>
+			<div className="flex justify-end gap-2">
+				<Button variant="outline" onClick={close}>
+					Close
+				</Button>
+				<Link
+					href={`/provider/requests/${order.id}`}
+					className="inline-flex h-9 items-center justify-center rounded-md bg-primary px-4 text-sm font-medium text-primary-foreground hover:bg-primary/90"
+				>
+					Open order
+				</Link>
+			</div>
+		</>
+	)
 }

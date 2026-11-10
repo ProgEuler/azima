@@ -10,6 +10,7 @@ import {
 } from "@phosphor-icons/react";
 import { usePathname } from "next/navigation";
 import { AppShell } from "@/components/app-shell";
+import { AuthGuard } from "@/components/auth-guard";
 import type { SidebarNavGroup } from "@/components/app-shared";
 
 const providerNavGroups: SidebarNavGroup[] = [
@@ -71,8 +72,10 @@ export default function ProviderLayout({
 	}));
 
 	return (
-		<AppShell role="provider" navGroups={navGroups}>
-			{children}
-		</AppShell>
+		<AuthGuard role="provider">
+			<AppShell role="provider" navGroups={navGroups}>
+				{children}
+			</AppShell>
+		</AuthGuard>
 	);
 }

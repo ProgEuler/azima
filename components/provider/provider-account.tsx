@@ -1,7 +1,16 @@
 "use client";
 
 import { useState } from "react";
+import Image from "next/image";
 import { Button } from "@/components/ui/button";
+import { QueryState } from "@/components/form-error";
+import { EditProfileDialog } from "@/components/provider/edit-profile-dialog";
+import { ChangePasswordDialog } from "@/components/provider/change-password-dialog";
+import { useApi } from "@/hooks/use-api";
+import { mediaUrl } from "@/lib/api/client";
+import { providerApi } from "@/lib/api/provider";
+import { supportApi } from "@/lib/api/support";
+import { dateLabel, guestRange, initials, money } from "@/lib/format";
 import {
 	Avatar,
 	AvatarFallback,
@@ -106,48 +115,84 @@ function Toggle({
 }
 
 export function ProviderAccount() {
-	const [whatsappEnabled, setWhatsappEnabled] = useState(true);
+	const profileQuery = useApi((signal) => providerApi.profile(signal), []);
+	const support = useApi((signal) => supportApi.contacts(signal), []);
+	const [editOpen, setEditOpen] = useState(false);
+	const [passwordOpen, setPasswordOpen] = useState(false);
+	const [whatsappError, setWhatsappError] = useState<string | null>(null);
+
+	const profile = profileQuery.data;
+	if (!profile) {
+		return (
+			<div className="mx-auto w-full max-w-3xl">
+				<QueryState loading={profileQuery.loading} error={profileQuery.error} onRetry={profileQuery.reload} label="Loading your account…" />
+			</div>
+		);
+	}
+
+	const cover = mediaUrl(profile.cover_image);
+	const contacts = support.data;
+
+	async function setWhatsapp(next: boolean) {
+		setWhatsappError(null);
+		const previous = profile!;
+		profileQuery.setData({ ...previous, whatsapp_notification: next });
+		try {
+			profileQuery.setData(await providerApi.updateProfile({ whatsapp_notification: next }));
+		} catch (e) {
+			profileQuery.setData(previous);
+			setWhatsappError(e instanceof Error ? e.message : "Could not save.");
+		}
+	}
 
 	return (
 		<div className="mx-auto w-full max-w-3xl space-y-6 pb-16 font-sans">
 			{/* Business profile */}
 			<section className="overflow-hidden rounded-2xl border border-[#EFECE6] dark:border-stone-800 bg-white dark:bg-stone-900/60 shadow-[0_1px_3px_0_rgba(0,0,0,0.02)]">
 				<div className="relative aspect-[16/6] w-full overflow-hidden bg-[#EFECE6] dark:bg-stone-800">
-					<img
-						src="/images/providers/mixed-grill.jpg"
-						alt="Yummy Catering cover"
-						className="h-full w-full object-cover"
-					/>
+					{cover ? (
+						<Image src={cover} alt={`${profile.business_name} cover`} fill unoptimized className="object-cover" />
+					) : (
+						<div className="flex h-full w-full items-center justify-center text-sm text-muted-foreground">
+							No cover photo yet
+						</div>
+					)}
 				</div>
 
 				<div className="flex items-start justify-between gap-4 px-5 pt-5">
 					<div className="min-w-0">
 						<h1 className="font-heading text-xl font-semibold tracking-tight text-[#1C1917] dark:text-stone-100">
-							Yummy Catering
+							{profile.business_name}
 						</h1>
 						<div className="mt-1.5 flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-muted-foreground">
-							<span className="inline-flex items-center gap-1">
-								<MapPinIcon className="size-3.5" />
-								Beirut
-							</span>
-							<span className="inline-flex items-center gap-1">
-								<StarIcon className="size-3.5 fill-amber-400 text-amber-400" weight="fill" />
-								<span className="font-semibold text-[#1C1917] dark:text-stone-100">
-									4.6
+							{profile.city ? (
+								<span className="inline-flex items-center gap-1">
+									<MapPinIcon className="size-3.5" />
+									{profile.city}
 								</span>
-								<span>(98)</span>
-							</span>
+							) : null}
+							{profile.reviews_count > 0 ? (
+								<span className="inline-flex items-center gap-1">
+									<StarIcon className="size-3.5 fill-amber-400 text-amber-400" weight="fill" />
+									<span className="font-semibold text-[#1C1917] dark:text-stone-100">
+										{Number(profile.rating_avg).toFixed(1)}
+									</span>
+									<span>({profile.reviews_count})</span>
+								</span>
+							) : (
+								<span>No reviews yet</span>
+							)}
 						</div>
 					</div>
-					<Button variant="outline" size="sm">
+					<Button variant="outline" size="sm" onClick={() => setEditOpen(true)}>
 						<PencilSimpleIcon className="size-4" />
 						Edit details
 					</Button>
 				</div>
 
-				<p className="px-5 pt-3 text-sm text-[#1C1917] dark:text-stone-200">
-					Live grill stations and hot mains prepared on site, with a uniformed serving team.
-				</p>
+				{profile.description ? (
+					<p className="px-5 pt-3 text-sm text-[#1C1917] dark:text-stone-200">{profile.description}</p>
+				) : null}
 
 				<div className="mt-4 divide-y divide-[#F5F2EC] dark:divide-stone-800">
 					<DetailRow
@@ -155,7 +200,7 @@ export function ProviderAccount() {
 						label="Bookings you accept"
 						value={
 							<>
-								10–300 guests
+								{guestRange(profile.smallest_order, profile.largest_order)}
 								<span className="ml-2 text-xs font-normal text-muted-foreground">
 									Hosts outside this range cannot select you.
 								</span>
@@ -165,19 +210,19 @@ export function ProviderAccount() {
 					<DetailRow
 						icon={<TruckIcon />}
 						label="Delivery"
-						value={<>Hamra · Verdun · Ras Beirut · Manara</>}
-						hint="$15 delivery fee"
+						value={<>{profile.delivery_areas.length ? profile.delivery_areas.join(" · ") : "No delivery areas set"}</>}
+						hint={`${money(profile.delivery_fee)} delivery fee`}
 					/>
 					<DetailRow
 						icon={<PackageIcon />}
 						label="Collection"
-						value={<>Hosts can collect from you</>}
-						hint="Hamra Street 118, Beirut"
+						value={<>{profile.allows_collection ? "Hosts can collect from you" : "Delivery only"}</>}
+						hint={profile.allows_collection ? profile.collection_address : undefined}
 					/>
 					<DetailRow
 						icon={<PhoneIcon />}
 						label="Hosts call you on"
-						value={<>+961 3 991 204</>}
+						value={<>{profile.phone || "—"}</>}
 					/>
 				</div>
 			</section>
@@ -190,7 +235,9 @@ export function ProviderAccount() {
 				<section className="overflow-hidden rounded-2xl border border-[#EFECE6] dark:border-stone-800 bg-white dark:bg-stone-900/60 shadow-[0_1px_3px_0_rgba(0,0,0,0.02)]">
 					<div className="flex items-center gap-4 px-5 py-4 border-b border-[#F5F2EC] dark:border-stone-800">
 						<Avatar size="lg" className="bg-[#FCF4E7] dark:bg-amber-950/40 text-[#915B1E] dark:text-amber-300">
-							<AvatarFallback className="bg-transparent font-semibold">HN</AvatarFallback>
+							<AvatarFallback className="bg-transparent font-semibold">
+								{initials(profile.owner_name || profile.business_name)}
+							</AvatarFallback>
 						</Avatar>
 						<div>
 							<div className="text-xs font-medium text-[#78716C] dark:text-stone-400">
@@ -205,17 +252,17 @@ export function ProviderAccount() {
 						<DetailRow
 							icon={<UserIcon />}
 							label="Your name"
-							value={<>Hadi Nassar</>}
+							value={<>{profile.owner_name || "Not set"}</>}
 						/>
 						<DetailRow
 							icon={<EnvelopeSimpleIcon />}
 							label="Sign-in email"
-							value={<>kitchen@yummy.example</>}
+							value={<>{profile.email ?? "—"}</>}
 						/>
 						<DetailRow
 							icon={<PhoneIcon />}
 							label="Phone hosts see"
-							value={<>+961 3 991 204</>}
+							value={<>{profile.phone || "—"}</>}
 						/>
 					</div>
 				</section>
@@ -232,10 +279,11 @@ export function ProviderAccount() {
 							Also message me on WhatsApp
 						</div>
 						<div className="mt-0.5 text-xs text-muted-foreground">
-							If a push alert does not reach you, azima messages +961 3 991 204 as well.
+							If a push alert does not reach you, azima messages {profile.phone || "your phone"} as well.
 						</div>
+						{whatsappError ? <div className="mt-1 text-xs text-destructive">{whatsappError}</div> : null}
 					</div>
-					<Toggle checked={whatsappEnabled} onChange={setWhatsappEnabled} />
+					<Toggle checked={profile.whatsapp_notification} onChange={(next) => void setWhatsapp(next)} />
 				</section>
 			</div>
 
@@ -249,26 +297,44 @@ export function ProviderAccount() {
 						<SupportRow
 							icon={<LockKeyIcon />}
 							title="Change password"
-							meta="Never changed"
+							meta={profile.password_changed_at ? `Last changed ${dateLabel(profile.password_changed_at)}` : "Never changed"}
+							onClick={() => setPasswordOpen(true)}
 						/>
-						<SupportRow
-							icon={<ChatCircleDotsIcon />}
-							title="WhatsApp azima support"
-							meta="+961 1 447 200"
-						/>
-						<SupportRow
-							icon={<EnvelopeSimpleIcon />}
-							title="Email support"
-							meta="support@azima.app"
-						/>
-						<SupportRow
-							icon={<PhoneIcon />}
-							title="Call support"
-							meta="+961 1 447 200"
-						/>
+						{contacts?.whatsapp ? (
+							<SupportRow
+								icon={<ChatCircleDotsIcon />}
+								title="WhatsApp azima support"
+								meta={contacts.whatsapp}
+								onClick={() => window.open(`https://wa.me/${contacts.whatsapp.replace(/[^0-9]/g, "")}`, "_blank", "noopener")}
+							/>
+						) : null}
+						{contacts?.email ? (
+							<SupportRow
+								icon={<EnvelopeSimpleIcon />}
+								title="Email support"
+								meta={contacts.email}
+								onClick={() => { window.location.href = `mailto:${contacts.email}`; }}
+							/>
+						) : null}
+						{contacts?.phone ? (
+							<SupportRow
+								icon={<PhoneIcon />}
+								title="Call support"
+								meta={contacts.phone}
+								onClick={() => { window.location.href = `tel:${contacts.phone}`; }}
+							/>
+						) : null}
 					</div>
 				</section>
 			</div>
+
+			<EditProfileDialog
+				open={editOpen}
+				onOpenChange={setEditOpen}
+				profile={profile}
+				onSaved={(saved) => profileQuery.setData(saved)}
+			/>
+			<ChangePasswordDialog open={passwordOpen} onOpenChange={setPasswordOpen} onChanged={profileQuery.reload} />
 		</div>
 	);
 }

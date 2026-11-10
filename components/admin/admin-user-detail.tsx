@@ -1,7 +1,6 @@
 "use client";
 
 import { useState } from "react";
-import Image from "next/image";
 import Link from "next/link";
 import {
 	ArrowLeftIcon,
@@ -11,14 +10,54 @@ import {
 	MapPinIcon,
 	UsersIcon,
 } from "@phosphor-icons/react";
-import { cn } from "@/lib/utils";
-import type { AdminHostUser } from "@/lib/mock-data";
 import { SuspendUserModal } from "@/components/admin/suspend-user-modal";
+import { MediaThumb } from "@/components/media-thumb";
+import { OrderStatusPill } from "@/components/order-status-pill";
+import { FormError, QueryState } from "@/components/form-error";
+import { useApi } from "@/hooks/use-api";
+import { adminApi } from "@/lib/api/admin";
+import { dateLabel, money, occasionImage } from "@/lib/format";
 
-export function AdminUserDetail({ user }: { user: AdminHostUser }) {
+export function AdminUserDetail({ id }: { id: string }) {
+	const detail = useApi((signal) => adminApi.user(id, signal), [id]);
 	const [isSuspendModalOpen, setIsSuspendModalOpen] = useState(false);
-	const [isSuspended, setIsSuspended] = useState(user.status === "suspended");
-	const [suspendReason, setSuspendReason] = useState<string | null>(null);
+	const [actionError, setActionError] = useState<unknown>(null);
+
+	if (!detail.data) {
+		return (
+			<div className="mx-auto w-full max-w-5xl">
+				<QueryState loading={detail.loading} error={detail.error} onRetry={detail.reload} label="Loading host…" />
+			</div>
+		);
+	}
+
+	const u = detail.data;
+	const user = {
+		name: u.full_name || u.email || u.phone || "Host",
+		phone: u.phone ?? "",
+		email: u.email ?? "—",
+		address: u.address || "—",
+		hostSince: dateLabel(u.created_at),
+		occasions: u.occasions_count,
+		liveOccasions: u.live_occasions,
+		ordersCount: u.orders_count,
+		cancelledOrders: u.cancelled_orders,
+		booked: u.orders_count > 0 ? money(u.booked_total) : "—",
+		cancellationRate: `${u.cancellation_rate}%`,
+		occasionsList: u.occasions,
+	};
+	const isSuspended = u.is_suspended;
+	const suspendReason = u.suspension_reason || null;
+
+	const reinstate = async () => {
+		setActionError(null);
+		try {
+			await adminApi.reinstateUser(id);
+			detail.reload();
+		} catch (error) {
+			setActionError(error);
+		}
+	};
 	return (
 		<div className="mx-auto w-full max-w-5xl space-y-6 pb-12 font-sans">
 			{/* Back Link */}
@@ -37,21 +76,12 @@ export function AdminUserDetail({ user }: { user: AdminHostUser }) {
 				<div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
 					{/* Left: Avatar + Name + Active badge + Joined date */}
 					<div className="flex items-center gap-4">
-						{user.avatarImage ? (
-							<div className="relative size-14 rounded-full overflow-hidden shrink-0 border border-[#EFECE6] dark:border-stone-700 bg-stone-100">
-								<Image
-									src={user.avatarImage}
-									alt={user.name}
-									fill
-									className="object-cover"
-									sizes="56px"
-								/>
-							</div>
-						) : (
-							<div className="size-14 rounded-full shrink-0 flex items-center justify-center font-bold text-base bg-[#FBF0EB] text-[#A3432B] dark:bg-amber-950/40 dark:text-amber-400 border border-[#F5E2DA] dark:border-amber-900/40">
-								{user.avatarInitials}
-							</div>
-						)}
+						<MediaThumb
+							src={u.avatar}
+							label={user.name}
+							sizes="56px"
+							className="size-14 rounded-full"
+						/>
 
 						<div className="space-y-1">
 							<div className="flex items-center gap-2.5 flex-wrap">
@@ -201,28 +231,26 @@ export function AdminUserDetail({ user }: { user: AdminHostUser }) {
 							>
 								{/* Left: Thumbnail & Occasion details */}
 								<div className="flex items-center gap-3.5">
-									<div className="relative size-12 sm:w-14 sm:h-12 rounded-lg overflow-hidden shrink-0 border border-[#EFECE6] dark:border-stone-700 bg-stone-100 shadow-2xs">
-										<Image
-											src={item.imageSrc}
-											alt={item.title}
-											fill
-											className="object-cover"
-											sizes="56px"
-										/>
-									</div>
+									<MediaThumb
+										src={null}
+										fallbackSrc={occasionImage(item.meal_type)}
+										label={item.title}
+										sizes="56px"
+										className="size-12 sm:w-14 sm:h-12 rounded-lg"
+									/>
 
 									<div className="space-y-0.5">
 										<div className="font-bold text-sm md:text-[15px] text-[#1C1917] dark:text-stone-100">
 											{item.title}
 										</div>
 										<div className="flex items-center gap-1.5 text-xs text-[#78716C] dark:text-stone-400">
-											<span>{item.date}</span>
+											<span>{dateLabel(item.event_date)}</span>
 											<span>·</span>
-											<span>{item.mealType}</span>
+											<span className="capitalize">{item.meal_type || "Occasion"}</span>
 											<span>·</span>
 											<span className="inline-flex items-center gap-1">
 												<UsersIcon className="size-3.5" />
-												{item.guests}
+												{item.guests ?? "—"}
 											</span>
 										</div>
 									</div>
@@ -231,30 +259,15 @@ export function AdminUserDetail({ user }: { user: AdminHostUser }) {
 								{/* Right: Badge & Price */}
 								<div className="flex items-center justify-between sm:justify-end gap-6 shrink-0 pl-16 sm:pl-0">
 									<div>
-										{item.status === "Rejected" && (
-											<span className="inline-flex items-center rounded-full bg-[#FDF0ED] dark:bg-red-950/50 px-2.5 py-0.5 text-xs font-semibold text-[#B83E28] dark:text-red-400">
-												Rejected
-											</span>
-										)}
-										{item.status === "Contact confirmed" && (
-											<span className="inline-flex items-center rounded-full bg-[#FCF4E7] dark:bg-amber-950/50 px-2.5 py-0.5 text-xs font-semibold text-[#915B1E] dark:text-amber-300">
-												Contact confirmed
-											</span>
-										)}
-										{item.status === "Preparing" && (
-											<span className="inline-flex items-center rounded-full bg-[#FCF4E7] dark:bg-amber-950/50 px-2.5 py-0.5 text-xs font-semibold text-[#915B1E] dark:text-amber-300">
-												Preparing
-											</span>
-										)}
-										{item.status === "Covered" && (
-											<span className="inline-flex items-center rounded-full bg-[#EAF5EC] dark:bg-emerald-950/50 px-2.5 py-0.5 text-xs font-semibold text-[#2D6A42] dark:text-emerald-300">
-												Covered
-											</span>
+										{item.status ? (
+											<OrderStatusPill status={item.status} />
+										) : (
+											<span className="text-xs text-[#78716C] dark:text-stone-400">No food ordered</span>
 										)}
 									</div>
 
 									<div className="font-bold text-sm md:text-base text-[#1C1917] dark:text-stone-100 text-right min-w-[50px]">
-										{item.amount}
+										{item.status ? money(item.amount) : "—"}
 									</div>
 								</div>
 							</div>
@@ -262,6 +275,8 @@ export function AdminUserDetail({ user }: { user: AdminHostUser }) {
 					)}
 				</div>
 			</div>
+
+			<FormError error={actionError} />
 
 			{/* Suspend Footer */}
 			<div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pt-2">
@@ -273,10 +288,7 @@ export function AdminUserDetail({ user }: { user: AdminHostUser }) {
 				{isSuspended ? (
 					<button
 						type="button"
-						onClick={() => {
-							setIsSuspended(false);
-							setSuspendReason(null);
-						}}
+						onClick={reinstate}
 						className="rounded-full border border-[#EFECE6] dark:border-stone-800 bg-white dark:bg-stone-900 px-5 py-2 text-xs font-semibold text-[#1C1917] dark:text-stone-100 hover:bg-stone-50 dark:hover:bg-stone-800 transition-colors self-start sm:self-auto cursor-pointer shadow-2xs"
 					>
 						Reinstate user
@@ -296,10 +308,10 @@ export function AdminUserDetail({ user }: { user: AdminHostUser }) {
 				open={isSuspendModalOpen}
 				onOpenChange={setIsSuspendModalOpen}
 				userName={user.name}
-				liveOrdersCount={user.liveOccasions ?? 6}
-				onConfirm={(reason) => {
-					setIsSuspended(true);
-					setSuspendReason(reason);
+				liveOrdersCount={user.liveOccasions}
+				onConfirm={async (reason) => {
+					await adminApi.suspendUser(id, reason);
+					detail.reload();
 				}}
 			/>
 		</div>

@@ -9,6 +9,7 @@ import {
 	DialogTitle,
 } from "@/components/ui/dialog";
 import { cn } from "@/lib/utils";
+import { FormError } from "@/components/form-error";
 
 const SUSPEND_REASONS = [
 	"Food safety concern",
@@ -24,7 +25,7 @@ export interface SuspendProviderModalProps {
 	onOpenChange: (open: boolean) => void;
 	providerName?: string;
 	liveOrdersCount?: number;
-	onConfirm?: (reason: string) => void;
+	onConfirm?: (reason: string) => void | Promise<void>;
 }
 
 export function SuspendProviderModal({
@@ -36,6 +37,8 @@ export function SuspendProviderModal({
 }: SuspendProviderModalProps) {
 	const [selectedReason, setSelectedReason] = useState<string>("");
 	const [otherReason, setOtherReason] = useState<string>("");
+	const [busy, setBusy] = useState(false);
+	const [error, setError] = useState<unknown>(null);
 
 	const ordersSentence =
 		liveOrdersCount === 1
@@ -48,16 +51,24 @@ export function SuspendProviderModal({
 		onOpenChange(false);
 	};
 
-	const handleConfirm = () => {
+	const handleConfirm = async () => {
 		const finalReason =
 			selectedReason === "Other"
 				? otherReason.trim() || "Other"
 				: selectedReason || "Account suspended";
 
-		onConfirm?.(finalReason);
-		setSelectedReason("");
-		setOtherReason("");
-		onOpenChange(false);
+		setBusy(true);
+		setError(null);
+		try {
+			await onConfirm?.(finalReason);
+			setSelectedReason("");
+			setOtherReason("");
+			onOpenChange(false);
+		} catch (e) {
+			setError(e);
+		} finally {
+			setBusy(false);
+		}
 	};
 
 	const isSubmitDisabled =
@@ -117,6 +128,8 @@ export function SuspendProviderModal({
 					</div>
 				</div>
 
+				<FormError error={error} />
+
 				<div className="flex items-center justify-end gap-3 pt-1">
 					<button
 						type="button"
@@ -128,7 +141,7 @@ export function SuspendProviderModal({
 					<button
 						type="button"
 						onClick={handleConfirm}
-						disabled={isSubmitDisabled}
+						disabled={isSubmitDisabled || busy}
 						className={cn(
 							"rounded-2xl border px-5 py-2.5 text-sm font-semibold transition-all shadow-2xs",
 							isSubmitDisabled

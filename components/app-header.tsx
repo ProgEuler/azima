@@ -15,7 +15,12 @@ import {
 	StethoscopeIcon,
 	ReceiptIcon,
 	BellRingingIcon,
-	PaperPlaneTiltIcon,
+	CalendarBlankIcon,
+	ChatCircleDotsIcon,
+	CurrencyDollarIcon,
+	HouseLineIcon,
+	PackageIcon,
+	UserCircleIcon,
 } from "@phosphor-icons/react";
 
 export function AppHeader() {
@@ -31,6 +36,18 @@ export function AppHeader() {
 		activeItem = { title: "Orders", icon: <ReceiptIcon /> };
 	} else if (pathname.startsWith("/admin/notification-delivery")) {
 		activeItem = { title: "Notification Delivery", icon: <BellRingingIcon /> };
+	} else if (pathname.startsWith("/provider/requests")) {
+		activeItem = { title: "Requests", icon: <ChatCircleDotsIcon /> };
+	} else if (pathname.startsWith("/provider/calendar")) {
+		activeItem = { title: "Calendar", icon: <CalendarBlankIcon /> };
+	} else if (pathname.startsWith("/provider/earnings")) {
+		activeItem = { title: "Earnings", icon: <CurrencyDollarIcon /> };
+	} else if (pathname.startsWith("/provider/services")) {
+		activeItem = { title: "My Services", icon: <PackageIcon /> };
+	} else if (pathname.startsWith("/provider/account")) {
+		activeItem = { title: "Account", icon: <UserCircleIcon /> };
+	} else if (pathname.startsWith("/provider")) {
+		activeItem = { title: "Dashboard", icon: <HouseLineIcon /> };
 	}
 	return (
 		<header

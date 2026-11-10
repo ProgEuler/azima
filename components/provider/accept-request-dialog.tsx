@@ -8,7 +8,9 @@ import {
 	DialogTitle,
 } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
-import type { ProviderRequest } from "@/components/provider/provider-mock-data";
+import { useState } from "react";
+import { FormError } from "@/components/form-error";
+import type { RequestView } from "@/lib/provider-orders";
 
 type TotalParts = {
 	amount: string;
@@ -43,9 +45,11 @@ export function AcceptRequestDialog({
 }: {
 	open: boolean;
 	onOpenChange: (open: boolean) => void;
-	request: ProviderRequest | null;
-	onConfirm: (id: string) => void;
+	request: RequestView | null;
+	onConfirm: (id: string) => Promise<void>;
 }) {
+	const [busy, setBusy] = useState(false);
+	const [error, setError] = useState<unknown>(null);
 	const totalParts = request ? splitTotal(request.total) : null;
 
 	return (
@@ -63,7 +67,7 @@ export function AcceptRequestDialog({
 				{request ? (
 					<div className="mx-6 mb-6 rounded-2xl border border-[#EFECE6] dark:border-stone-800 bg-[#FAF8F5] dark:bg-stone-800/40 px-5 py-2 divide-y divide-[#EFECE6] dark:divide-stone-700/50">
 						{DETAIL_ROWS.map((row) => {
-							const raw = request[row.key as keyof ProviderRequest] as string;
+							const raw = request[row.key] as string;
 							const display = row.render ? row.render(raw) : raw;
 							return (
 								<div
@@ -97,18 +101,32 @@ export function AcceptRequestDialog({
 					</div>
 				) : null}
 
+				{error ? (
+					<div className="px-6 pb-3">
+						<FormError error={error} />
+					</div>
+				) : null}
+
 				<div className="flex items-center gap-2 px-6 pb-6">
 					<Button
 						type="button"
 						className="bg-[#8B351F] hover:bg-[#722A18] text-white"
-						disabled={!request}
-						onClick={() => {
+						disabled={!request || busy}
+						onClick={async () => {
 							if (!request) return;
-							onConfirm(request.id);
-							onOpenChange(false);
+							setBusy(true);
+							setError(null);
+							try {
+								await onConfirm(request.id);
+								onOpenChange(false);
+							} catch (e) {
+								setError(e);
+							} finally {
+								setBusy(false);
+							}
 						}}
 					>
-						Yes, accept
+						{busy ? "Accepting…" : "Yes, accept"}
 					</Button>
 					<Button
 						type="button"

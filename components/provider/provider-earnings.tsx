@@ -5,20 +5,35 @@ import { CreditCardIcon, WalletIcon } from "@phosphor-icons/react";
 import { Card, CardContent } from "@/components/ui/card";
 import { SectionHeader } from "@/components/dashboard/section-header";
 import { EmptyState } from "@/components/dashboard/empty-state";
-import {
-	PROVIDER_EARNINGS,
-	type EarningsJob,
-	type EarningsJobMethod,
-} from "@/components/provider/provider-mock-data";
+import { QueryState } from "@/components/form-error";
+import { useApi } from "@/hooks/use-api";
+import { providerApi, type MonthEarnings } from "@/lib/api/provider";
+import { dayMonth, money } from "@/lib/format";
 
-const METHOD_LABEL_STYLES: Record<EarningsJobMethod, string> = {
+type JobMethod = "Cash collected" | "Paid online";
+
+const METHOD_LABEL_STYLES: Record<JobMethod, string> = {
 	"Cash collected": "text-[#915B1E] dark:text-amber-400",
 	"Paid online": "text-emerald-600 dark:text-emerald-400",
 };
 
+const SHORT = new Intl.DateTimeFormat("en-GB", { month: "short", year: "2-digit" });
+const LONG = new Intl.DateTimeFormat("en-GB", { month: "long", year: "numeric" });
+
+function monthDate(month: string) {
+	const [y, m] = month.split("-").map(Number);
+	return new Date(y, m - 1, 1);
+}
+
 export function ProviderEarnings() {
+	const earnings = useApi((signal) => providerApi.earnings(6, signal), []);
 	const [activeMonthIndex, setActiveMonthIndex] = useState(0);
-	const activeMonth = PROVIDER_EARNINGS[activeMonthIndex];
+	const months: MonthEarnings[] = earnings.data ?? [];
+	const current = months[activeMonthIndex];
+	const activeMonth = current && {
+		...current,
+		monthLabel: LONG.format(monthDate(current.month)),
+	};
 
 	return (
 		<div className="mx-auto w-full max-w-5xl space-y-6 pb-16 font-sans">
@@ -27,12 +42,16 @@ export function ProviderEarnings() {
 				description="Only delivered jobs count here. Cash is money you collected on the day; online was settled when the host paid at checkout."
 			/>
 
+			<QueryState loading={earnings.loading && !earnings.data} error={earnings.error} onRetry={earnings.reload} label="Loading earnings…" />
+
+			{activeMonth ? (
+			<>
 			<div className="flex flex-wrap gap-2">
-				{PROVIDER_EARNINGS.map((month, index) => {
+				{months.map((month, index) => {
 					const isActive = index === activeMonthIndex;
 					return (
 						<button
-							key={month.id}
+							key={month.month}
 							type="button"
 							onClick={() => setActiveMonthIndex(index)}
 							className={`inline-flex items-center rounded-full px-4 py-2 text-xs sm:text-sm font-semibold transition-colors ${
@@ -41,7 +60,7 @@ export function ProviderEarnings() {
 									: "bg-[#FAF8F5] dark:bg-stone-900/60 text-[#1C1917] dark:text-stone-200 border border-[#EFECE6] dark:border-stone-800 hover:bg-[#F5F2EC] dark:hover:bg-stone-800"
 							}`}
 						>
-							{month.label}
+							{SHORT.format(monthDate(month.month))}
 						</button>
 					);
 				})}
@@ -51,10 +70,10 @@ export function ProviderEarnings() {
 				<CardContent>
 					<div className="text-sm text-muted-foreground">{activeMonth.monthLabel}</div>
 					<div className="mt-1 font-heading text-3xl sm:text-4xl font-semibold tracking-tight text-[#1C1917] dark:text-stone-100">
-						{activeMonth.total}
+						{money(activeMonth.total)}
 					</div>
 					<div className="mt-1 text-sm text-muted-foreground">
-						{activeMonth.jobsDelivered} jobs delivered
+						{activeMonth.jobs_delivered} {activeMonth.jobs_delivered === 1 ? "job" : "jobs"} delivered
 					</div>
 
 					<div className="mt-5 grid gap-3 sm:grid-cols-2">
@@ -63,7 +82,7 @@ export function ProviderEarnings() {
 							<div>
 								<div className="text-xs text-muted-foreground">Collected in cash</div>
 								<div className="mt-0.5 font-heading text-lg font-semibold text-[#1C1917] dark:text-stone-100">
-									{activeMonth.cashAmount}
+									{money(activeMonth.cash_amount)}
 								</div>
 							</div>
 						</div>
@@ -72,7 +91,7 @@ export function ProviderEarnings() {
 							<div>
 								<div className="text-xs text-muted-foreground">Paid online</div>
 								<div className="mt-0.5 font-heading text-lg font-semibold text-[#1C1917] dark:text-stone-100">
-									{activeMonth.onlineAmount}
+									{money(activeMonth.online_amount)}
 								</div>
 							</div>
 						</div>
@@ -94,9 +113,9 @@ export function ProviderEarnings() {
 					</div>
 				) : (
 					<div className="mt-3 space-y-3">
-						{activeMonth.jobs.map((job: EarningsJob) => (
+						{activeMonth.jobs.map((job) => (
 							<div
-								key={job.code}
+								key={job.order_id}
 								className="flex items-center gap-4 rounded-2xl border border-[#EFECE6] dark:border-stone-800 bg-white dark:bg-stone-900/60 shadow-[0_1px_3px_0_rgba(0,0,0,0.02)] px-4 sm:px-5 py-4"
 							>
 								<div className="size-12 shrink-0 rounded-xl bg-[#EFECE6] dark:bg-stone-800" />
@@ -105,15 +124,15 @@ export function ProviderEarnings() {
 										{job.title}
 									</div>
 									<div className="mt-0.5 text-xs text-muted-foreground">
-										{job.date} · {job.guests} · {job.code}
+										{dayMonth(job.date)} · {job.guests} guests · {job.order_number}
 									</div>
 								</div>
 								<div className="text-right shrink-0">
 									<div className="font-semibold text-sm text-[#1C1917] dark:text-stone-100">
-										{job.amount}
+										{money(job.amount)}
 									</div>
-									<div className={`mt-0.5 text-xs font-medium ${METHOD_LABEL_STYLES[job.method]}`}>
-										{job.method}
+									<div className={`mt-0.5 text-xs font-medium ${METHOD_LABEL_STYLES[job.method === "online" ? "Paid online" : "Cash collected"]}`}>
+										{job.method === "online" ? "Paid online" : "Cash collected"}
 									</div>
 								</div>
 							</div>
@@ -121,6 +140,8 @@ export function ProviderEarnings() {
 					</div>
 				)}
 			</div>
+			</>
+			) : null}
 		</div>
 	);
 }

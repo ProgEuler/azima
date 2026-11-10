@@ -1,72 +1,34 @@
 "use client";
 
-import { useState, useMemo } from "react";
-import {
-	MagnifyingGlassIcon,
-	CaretDownIcon,
-	TruckIcon,
-} from "@phosphor-icons/react";
+import { useState } from "react";
+import { MagnifyingGlassIcon, CaretDownIcon } from "@phosphor-icons/react";
 import { cn } from "@/lib/utils";
-import { RequestCard } from "./request-card";
-import {
-	INITIAL_PROVIDER_REQUESTS,
-	INITIAL_ACTIVE_ORDERS,
-	type ProviderRequest,
-} from "./provider-mock-data";
+import { QueryState } from "@/components/form-error";
+import { ActiveOrderRow } from "@/components/provider/active-order-row";
+import { RequestCard } from "@/components/provider/request-card";
+import { useApi, useDebounced } from "@/hooks/use-api";
+import { ordersApi, type OrderTabId } from "@/lib/api/provider";
+import { timelineGroup } from "@/lib/provider-orders";
 
 export function ProviderRequests() {
-	const [activeTab, setActiveTab] = useState<"needs_response" | "active" | "completed">(
-		"needs_response"
-	);
+	const [activeTab, setActiveTab] = useState<OrderTabId>("needs_response");
 	const [searchQuery, setSearchQuery] = useState("");
 	const [sortBy, setSortBy] = useState<"soonest" | "newest">("soonest");
-	const [requests, setRequests] = useState<ProviderRequest[]>(INITIAL_PROVIDER_REQUESTS);
-	const [activeOrders, setActiveOrders] = useState(INITIAL_ACTIVE_ORDERS);
+	const q = useDebounced(searchQuery.trim());
 
-	const handleAccept = (id: string) => {
-		setRequests((prev) =>
-			prev.map((r) => (r.id === id ? { ...r, status: "Accepted" } : r))
-		);
-	};
-
-	const handleReject = (id: string) => {
-		setRequests((prev) =>
-			prev.map((r) => (r.id === id ? { ...r, status: "Rejected" } : r))
-		);
-	};
-
-	const handleMarkDelivered = (id: string) => {
-		setActiveOrders((prev) =>
-			prev.map((o) => (o.id === id ? { ...o, status: "Delivered" } : o))
-		);
-	};
-
-	// Filtered requests based on search query
-	const filteredRequests = useMemo(() => {
-		const q = searchQuery.toLowerCase().trim();
-		if (!q) return requests;
-
-		return requests.filter(
-			(r) =>
-				r.title.toLowerCase().includes(q) ||
-				r.code.toLowerCase().includes(q) ||
-				r.delivery.toLowerCase().includes(q) ||
-				r.mealTag.toLowerCase().includes(q) ||
-				r.items.some((item) => item.name.toLowerCase().includes(q))
-		);
-	}, [requests, searchQuery]);
-
-	// Split by timeline group
-	const thisWeekRequests = filteredRequests.filter(
-		(r) => r.timelineGroup === "This week"
+	const orders = useApi(
+		(signal) => ordersApi.list({ tab: activeTab, q, sort: sortBy, page_size: 100 }, signal),
+		[activeTab, q, sortBy],
 	);
-	const thisMonthRequests = filteredRequests.filter(
-		(r) => r.timelineGroup === "This month"
-	);
+	const list = orders.data?.results ?? [];
+	const counts = orders.data?.counts ?? { needs_response: 0, active: 0, completed: 0 };
+	const pendingCount = counts.needs_response;
+	const activeCount = counts.active;
+	const completedCount = counts.completed;
 
-	const pendingCount = requests.filter((r) => r.status === "Awaiting response").length;
-	const activeCount = activeOrders.length;
-	const completedCount = 0;
+	const thisWeekRequests = list.filter((o) => timelineGroup(o.delivery_date) === "This week");
+	const thisMonthRequests = list.filter((o) => timelineGroup(o.delivery_date) === "This month");
+	const laterRequests = list.filter((o) => timelineGroup(o.delivery_date) === "Later");
 
 	return (
 		<div className="mx-auto w-full max-w-5xl space-y-6 pb-16 font-sans">
@@ -145,54 +107,39 @@ export function ProviderRequests() {
 				</div>
 			</div>
 
+			<QueryState loading={orders.loading && !orders.data} error={orders.error} onRetry={orders.reload} label="Loading requests…" />
+
 			{/* Tab 1: Needs your response */}
-			{activeTab === "needs_response" && (
+			{orders.data && activeTab === "needs_response" && (
 				<div className="space-y-7">
-					{/* This week section */}
-					{thisWeekRequests.length > 0 && (
-						<section className="space-y-3">
-							<div className="text-xs font-semibold text-[#78716C] dark:text-stone-400">
-								This week
-							</div>
-							<div className="space-y-4">
-								{thisWeekRequests.map((req) => (
-									<RequestCard
-										key={req.id}
-										request={req}
-										onAccept={handleAccept}
-										onReject={handleReject}
-									/>
-								))}
-							</div>
-						</section>
+					{[
+						{ label: "This week", rows: thisWeekRequests },
+						{ label: "This month", rows: thisMonthRequests },
+						{ label: "Later", rows: laterRequests },
+					].map(({ label, rows }) =>
+						rows.length > 0 ? (
+							<section key={label} className="space-y-3">
+								<div className="text-xs font-semibold text-[#78716C] dark:text-stone-400">
+									{label}
+								</div>
+								<div className="space-y-4">
+									{rows.map((order) => (
+										<RequestCard key={order.id} order={order} onChanged={orders.reload} />
+									))}
+								</div>
+							</section>
+						) : null,
 					)}
 
-					{/* This month section */}
-					{thisMonthRequests.length > 0 && (
-						<section className="space-y-3">
-							<div className="text-xs font-semibold text-[#78716C] dark:text-stone-400">
-								This month
-							</div>
-							<div className="space-y-4">
-								{thisMonthRequests.map((req) => (
-									<RequestCard
-										key={req.id}
-										request={req}
-										onAccept={handleAccept}
-										onReject={handleReject}
-									/>
-								))}
-							</div>
-						</section>
-					)}
-
-					{filteredRequests.length === 0 && (
-						<div className="rounded-2xl border border-[#EFECE6] dark:border-stone-800 bg-white dark:bg-stone-900/60 p-8 text-center space-y-2">
-							<p className="text-sm font-semibold text-[#1C1917] dark:text-stone-200">
-								No requests match your search
+					{list.length === 0 && (
+						<div className="rounded-2xl border border-[#EFECE6] dark:border-stone-800 bg-white dark:bg-stone-900/60 p-10 text-center">
+							<p className="font-semibold text-sm text-[#1C1917] dark:text-stone-100">
+								{q ? "No requests match your search" : "You are all caught up"}
 							</p>
-							<p className="text-xs text-[#78716C] dark:text-stone-400">
-								Try searching by occasion name, reference code, or item.
+							<p className="text-xs text-[#78716C] dark:text-stone-400 mt-1">
+								{q
+									? "Try searching by occasion name, reference code, or item."
+									: "New requests from hosts will appear here."}
 							</p>
 						</div>
 					)}
@@ -200,68 +147,40 @@ export function ProviderRequests() {
 			)}
 
 			{/* Tab 2: Active orders */}
-			{activeTab === "active" && (
+			{orders.data && activeTab === "active" && (
 				<div className="space-y-3">
 					<div className="text-xs font-semibold text-[#78716C] dark:text-stone-400">
 						In progress & scheduled
 					</div>
-
-					<div className="space-y-3">
-						{activeOrders.map((order) => (
-							<div
-								key={order.id}
-								className="rounded-2xl border border-[#EFECE6] dark:border-stone-800 bg-white dark:bg-stone-900/60 p-5 md:p-6 shadow-[0_1px_3px_0_rgba(0,0,0,0.02)] flex flex-col sm:flex-row sm:items-center justify-between gap-4"
-							>
-								<div className="space-y-1">
-									<h3 className="font-bold text-sm md:text-base text-[#1C1917] dark:text-stone-100">
-										{order.title}
-									</h3>
-									<p className="text-xs text-[#78716C] dark:text-stone-400">
-										{order.meta}
-									</p>
-									<div className="pt-1">
-										{order.status === "On the way" ? (
-											<button
-												type="button"
-												onClick={() => handleMarkDelivered(order.id)}
-												className="inline-flex items-center gap-1.5 text-xs font-semibold text-[#8B351F] dark:text-amber-400 hover:underline cursor-pointer"
-											>
-												<TruckIcon className="size-4" />
-												Mark it delivered once it arrives
-											</button>
-										) : (
-											<span className="inline-flex items-center gap-1.5 text-xs font-semibold text-[#2D6A42] dark:text-emerald-400">
-												✓ Delivered
-											</span>
-										)}
-									</div>
-								</div>
-
-								<span
-									className={cn(
-										"inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-semibold self-start sm:self-auto",
-										order.status === "On the way"
-											? "bg-[#EAF5EC] dark:bg-emerald-950/50 text-[#2D6A42] dark:text-emerald-300"
-											: "bg-stone-100 dark:bg-stone-800 text-stone-600 dark:text-stone-300"
-									)}
-								>
-									{order.status}
-								</span>
-							</div>
-						))}
-					</div>
+					{list.length === 0 ? (
+						<p className="text-sm text-[#78716C] dark:text-stone-400">
+							{q ? "No active orders match your search." : "No active orders right now."}
+						</p>
+					) : (
+						list.map((order) => (
+							<ActiveOrderRow key={order.id} order={order} onChanged={orders.reload} />
+						))
+					)}
 				</div>
 			)}
 
 			{/* Tab 3: Completed */}
-			{activeTab === "completed" && (
-				<div className="rounded-2xl border border-[#EFECE6] dark:border-stone-800 bg-white dark:bg-stone-900/60 p-12 text-center space-y-2">
-					<p className="text-sm font-semibold text-[#1C1917] dark:text-stone-200">
-						No completed orders yet
-					</p>
-					<p className="text-xs text-[#78716C] dark:text-stone-400">
-						Fulfilled orders will be archived here once delivered.
-					</p>
+			{orders.data && activeTab === "completed" && (
+				<div className="space-y-3">
+					{list.length === 0 ? (
+						<div className="rounded-2xl border border-[#EFECE6] dark:border-stone-800 bg-white dark:bg-stone-900/60 p-10 text-center">
+							<p className="font-semibold text-sm text-[#1C1917] dark:text-stone-100">
+								{q ? "No completed orders match your search" : "No completed orders yet"}
+							</p>
+							<p className="text-xs text-[#78716C] dark:text-stone-400 mt-1">
+								Fulfilled orders will be archived here once delivered.
+							</p>
+						</div>
+					) : (
+						list.map((order) => (
+							<ActiveOrderRow key={order.id} order={order} onChanged={orders.reload} />
+						))
+					)}
 				</div>
 			)}
 		</div>

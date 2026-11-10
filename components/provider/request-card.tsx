@@ -1,7 +1,6 @@
 "use client";
 
 import { useState } from "react";
-import Image from "next/image";
 import Link from "next/link";
 import {
 	ClockIcon,
@@ -10,49 +9,43 @@ import {
 	StorefrontIcon,
 	CurrencyDollarIcon,
 } from "@phosphor-icons/react";
-import { cn } from "@/lib/utils";
-import type { ProviderRequest } from "./provider-mock-data";
 import { AcceptRequestDialog } from "@/components/provider/accept-request-dialog";
+import { RejectRequestDialog } from "@/components/provider/reject-request-dialog";
+import { AdvanceOrderButton } from "@/components/provider/advance-order-button";
+import { FormError } from "@/components/form-error";
+import { MediaThumb } from "@/components/media-thumb";
+import { ordersApi, type ProviderOrder } from "@/lib/api/provider";
+import { occasionImage } from "@/lib/format";
+import { toRequestView } from "@/lib/provider-orders";
 
+/** A request or order, with the actions the caterer can take on it right now. */
 export function RequestCard({
-	request,
-	onAccept,
-	onReject,
+	order,
+	onChanged,
 }: {
-	request: ProviderRequest;
-	onAccept?: (id: string) => void;
-	onReject?: (id: string) => void;
+	order: ProviderOrder;
+	/** Called after the server accepted a change so the parent can refetch. */
+	onChanged?: () => void;
 }) {
-	const [status, setStatus] = useState<"Awaiting response" | "Accepted" | "Rejected">(
-		request.status
-	);
+	const request = toRequestView(order);
 	const [acceptDialogOpen, setAcceptDialogOpen] = useState(false);
+	const [rejectDialogOpen, setRejectDialogOpen] = useState(false);
+	const [error, setError] = useState<unknown>(null);
 
-	const handleAccept = () => {
-		setStatus("Accepted");
-		onAccept?.(request.id);
-	};
-
-	const handleReject = () => {
-		setStatus("Rejected");
-		onReject?.(request.id);
-	};
-
-	const handleUndo = () => {
-		setStatus("Awaiting response");
-	};
+	const awaiting = order.status === "pending";
+	const declined = order.status === "rejected" || order.status === "cancelled";
 
 	return (
 		<div className="rounded-2xl border border-[#EFECE6] dark:border-stone-800 bg-white dark:bg-stone-900/60 shadow-[0_1px_3px_0_rgba(0,0,0,0.02)] overflow-hidden transition-all font-sans">
 			{/* Cover image banner with pills overlay */}
 			<div className="relative h-44 sm:h-52 w-full bg-stone-100">
-				<Image
-					src={request.coverImage}
-					alt={request.title}
-					fill
-					className="object-cover"
+				<MediaThumb
+					src={null}
+					fallbackSrc={occasionImage(order.meal_type)}
+					label={request.title}
 					sizes="(max-width: 1024px) 100vw, 1024px"
 					priority
+					className="absolute inset-0 border-0"
 				/>
 				<div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/35 to-black/20" />
 
@@ -70,7 +63,7 @@ export function RequestCard({
 					</div>
 
 					<span className="inline-flex items-center rounded-full bg-white/95 dark:bg-stone-900/90 px-2.5 py-0.5 text-[11px] font-semibold text-[#666059] dark:text-stone-300 shadow-2xs backdrop-blur-xs">
-						{status}
+						{order.status_label}
 					</span>
 				</div>
 
@@ -160,15 +153,12 @@ export function RequestCard({
 							className="flex items-center justify-between gap-4 py-3 first:pt-0 last:pb-0"
 						>
 							<div className="flex items-center gap-3">
-								<div className="relative size-11 rounded-lg overflow-hidden shrink-0 border border-[#EFECE6] dark:border-stone-700 bg-stone-100 shadow-2xs">
-									<Image
-										src={item.imageSrc}
-										alt={item.name}
-										fill
-										className="object-cover"
-										sizes="44px"
-									/>
-								</div>
+								<MediaThumb
+									src={item.image}
+									label={item.name}
+									sizes="44px"
+									className="size-11 rounded-lg"
+								/>
 
 								<div className="space-y-0.5">
 									<div className="font-bold text-sm text-[#1C1917] dark:text-stone-100">
@@ -200,8 +190,8 @@ export function RequestCard({
 
 			{/* Footer buttons */}
 			<div className="p-4 sm:px-6 border-t border-[#F5F2EC] dark:border-stone-800 flex items-center justify-between gap-3 bg-[#FAF8F5]/40 dark:bg-stone-900/30">
-				<div className="flex items-center gap-2.5">
-					{status === "Awaiting response" ? (
+				<div className="flex items-center gap-2.5 flex-wrap">
+					{awaiting ? (
 						<>
 							<button
 								type="button"
@@ -212,54 +202,61 @@ export function RequestCard({
 							</button>
 							<button
 								type="button"
-								onClick={handleReject}
+								onClick={() => setRejectDialogOpen(true)}
 								className="rounded-full border border-[#EFECE6] dark:border-stone-700 bg-white dark:bg-stone-900 hover:bg-stone-50 dark:hover:bg-stone-800 text-[#8B351F] dark:text-amber-400 px-5 py-2 text-xs font-semibold transition-colors cursor-pointer"
 							>
 								Reject
 							</button>
 						</>
-					) : status === "Accepted" ? (
-						<div className="flex items-center gap-2">
+					) : declined ? (
+						<span className="inline-flex items-center rounded-full bg-[#FDF0ED] dark:bg-red-950/50 px-3 py-1.5 text-xs font-semibold text-[#B83E28] dark:text-red-400">
+							✕ {order.status_label}
+						</span>
+					) : order.status === "delivered" ? (
+						<span className="inline-flex items-center rounded-full bg-[#EAF5EC] dark:bg-emerald-950/50 px-3 py-1.5 text-xs font-semibold text-[#2D6A42] dark:text-emerald-300">
+							✓ Delivered
+						</span>
+					) : (
+						<>
 							<span className="inline-flex items-center rounded-full bg-[#EAF5EC] dark:bg-emerald-950/50 px-3 py-1.5 text-xs font-semibold text-[#2D6A42] dark:text-emerald-300">
 								✓ Accepted
 							</span>
-							<button
-								type="button"
-								onClick={handleUndo}
-								className="text-xs text-[#78716C] hover:underline cursor-pointer"
-							>
-								Undo
-							</button>
-						</div>
-					) : (
-						<div className="flex items-center gap-2">
-							<span className="inline-flex items-center rounded-full bg-[#FDF0ED] dark:bg-red-950/50 px-3 py-1.5 text-xs font-semibold text-[#B83E28] dark:text-red-400">
-								✕ Rejected
-							</span>
-							<button
-								type="button"
-								onClick={handleUndo}
-								className="text-xs text-[#78716C] hover:underline cursor-pointer"
-							>
-								Undo
-							</button>
-						</div>
+							<AdvanceOrderButton order={order} onChanged={onChanged} onError={setError} />
+						</>
 					)}
 				</div>
 
 				<Link
-					href={`/admin/orders/${request.code.replace(/-/g, "")}`}
+					href={`/provider/requests/${order.id}`}
 					className="rounded-full border border-[#EFECE6] dark:border-stone-700 bg-white dark:bg-stone-900 hover:bg-stone-50 dark:hover:bg-stone-800 text-[#1C1917] dark:text-stone-200 px-4 py-2 text-xs font-semibold transition-colors cursor-pointer"
 				>
 					Details
 				</Link>
 			</div>
 
+			{error ? (
+				<div className="px-4 sm:px-6 pb-4">
+					<FormError error={error} />
+				</div>
+			) : null}
+
 			<AcceptRequestDialog
 				open={acceptDialogOpen}
 				onOpenChange={setAcceptDialogOpen}
 				request={request}
-				onConfirm={handleAccept}
+				onConfirm={async (id) => {
+					await ordersApi.accept(id);
+					onChanged?.();
+				}}
+			/>
+			<RejectRequestDialog
+				open={rejectDialogOpen}
+				onOpenChange={setRejectDialogOpen}
+				title={request.title}
+				onConfirm={async (reason) => {
+					await ordersApi.reject(order.id, reason);
+					onChanged?.();
+				}}
 			/>
 		</div>
 	);

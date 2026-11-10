@@ -1,8 +1,10 @@
 "use client"
 
+import { useState } from "react"
 import Link from "next/link"
 import { CheckCircleIcon, ClockClockwiseIcon } from "@phosphor-icons/react"
 
+import { useAuth, homeFor } from "@/components/auth-provider"
 import { OnboardingShell } from "@/components/onboarding-shell"
 import { OnboardingStepper } from "@/components/onboarding-stepper"
 import { Button } from "@/components/ui/button"
@@ -16,6 +18,17 @@ import {
 } from "@/components/ui/card"
 
 export function SubmittedCard() {
+	const { user, status, refreshUser, signOut } = useAuth()
+	const [checking, setChecking] = useState(false)
+	const approved = Boolean(user?.is_approved)
+	const rejected = user?.application_status === "rejected"
+
+	const checkStatus = async () => {
+		setChecking(true)
+		await refreshUser()
+		setChecking(false)
+	}
+
 	return (
 		<OnboardingShell>
 			<div className="flex flex-col items-center gap-4 text-center">
@@ -24,10 +37,19 @@ export function SubmittedCard() {
 				</div>
 				<div className="space-y-1">
 					<h1 className="font-bold text-2xl tracking-wide">
-						Application submitted
+						{approved
+							? "You're approved"
+							: rejected
+								? "Application not approved"
+								: "Application submitted"}
 					</h1>
 					<p className="text-muted-foreground">
-						Thank you for your application. We will review it shortly.
+						{approved
+							? "Your kitchen is live on Azima. You can start receiving requests."
+							: rejected
+								? user?.rejection_reason ||
+									"Unfortunately we could not approve your application."
+								: "Thank you for your application. We will review it shortly."}
 					</p>
 				</div>
 			</div>
@@ -83,19 +105,34 @@ export function SubmittedCard() {
 					</ol>
 				</CardContent>
 				<CardFooter className="flex flex-col gap-2 sm:flex-row sm:justify-end">
-					<Button
-						variant="outline"
-						render={<Link href="/" />}
-						nativeButton={false}
-					>
-						Back to home
-					</Button>
-					<Button
-						render={<Link href="/" />}
-						nativeButton={false}
-					>
-						View status
-					</Button>
+					{status === "authenticated" ? (
+						<Button variant="outline" onClick={() => void signOut()}>
+							Sign out
+						</Button>
+					) : (
+						<Button
+							variant="outline"
+							render={<Link href="/signin" />}
+							nativeButton={false}
+						>
+							Sign in
+						</Button>
+					)}
+					{approved && user ? (
+						<Button
+							render={<Link href={homeFor(user)} />}
+							nativeButton={false}
+						>
+							Go to dashboard
+						</Button>
+					) : (
+						<Button
+							onClick={checkStatus}
+							disabled={checking || status !== "authenticated"}
+						>
+							{checking ? "Checking…" : "View status"}
+						</Button>
+					)}
 				</CardFooter>
 			</div>
 		</OnboardingShell>

@@ -1,176 +1,60 @@
 "use client";
 
 import { useState } from "react";
-import Image from "next/image";
 import Link from "next/link";
 import { CaretDownIcon, MagnifyingGlassIcon } from "@phosphor-icons/react";
+import { MediaThumb } from "@/components/media-thumb";
+import { OrderStatusPill } from "@/components/order-status-pill";
+import { useApi, useDebounced } from "@/hooks/use-api";
+import { adminApi, type OrderScope, type OrderTab } from "@/lib/api/admin";
+import {
+	dateLabel,
+	joinParts,
+	money,
+	occasionImage,
+	paymentMethodLabel,
+	pluralize,
+	timeLabel,
+} from "@/lib/format";
+import { ORDER_WAITING_ON, type OrderStatus } from "@/lib/order-meta";
 
-type OrderStatus =
-	| "Contact confirmed"
-	| "Awaiting response"
-	| "Preparing"
-	| "On the way"
-	| "Accepted";
-
-type WaitingOn =
-	| "Host contacted"
-	| "Waiting on caterer"
-	| "In the kitchen"
-	| "On the way"
-	| "Caterer to call the host";
-
-type OrderRow = {
-	code: string;
-	occasionTitle: string;
-	occasionMeta: string;
-	breadcrumb: string;
-	imageSrc: string;
-	total: string;
-	totalNote: string;
-	waitingOn: WaitingOn;
-	status: OrderStatus;
-	isRev?: boolean;
-};
-
-const ORDERS: OrderRow[] = [
-	{
-		code: "AZ-2418",
-		occasionTitle: "Iftar Gathering",
-		occasionMeta: "8 Sep 2026 · 6:30 PM · 35 guests",
-		breadcrumb: "Iftar · Socart Catering",
-		imageSrc: "/images/overview/birthday-dinner.jpg",
-		total: "$560",
-		totalNote: "Cash on delivery",
-		waitingOn: "Host contacted",
-		status: "Contact confirmed",
-	},
-	{
-		code: "AZ-2431",
-		occasionTitle: "Iftar Gathering",
-		occasionMeta: "8 Sep 2026 · 6:30 PM · 35 guests",
-		breadcrumb: "Iftar · Yummy Catering",
-		imageSrc: "/images/overview/birthday-dinner.jpg",
-		total: "$420",
-		totalNote: "Cash on delivery",
-		waitingOn: "Waiting on caterer",
-		status: "Awaiting response",
-	},
-	{
-		code: "AZ-2402",
-		occasionTitle: "Team Lunch",
-		occasionMeta: "31 Aug 2026 · 1:00 PM · 18 guests",
-		breadcrumb: "Lunch · Sweet House",
-		imageSrc: "/images/overview/team-lunch.jpg",
-		total: "$144",
-		totalNote: "Paid online",
-		waitingOn: "In the kitchen",
-		status: "Preparing",
-		isRev: true,
-	},
-	{
-		code: "AZ-2356",
-		occasionTitle: "Team Lunch",
-		occasionMeta: "31 Aug 2026 · 1:00 PM · 18 guests",
-		breadcrumb: "Lunch · Yummy Catering",
-		imageSrc: "/images/overview/team-lunch.jpg",
-		total: "$198",
-		totalNote: "Cash on delivery",
-		waitingOn: "On the way",
-		status: "On the way",
-	},
-	{
-		code: "AZ-2377",
-		occasionTitle: "Weekend Dinner",
-		occasionMeta: "20 Sep 2026 · 8:00 PM · 60 guests",
-		breadcrumb: "Dinner · Socart Catering",
-		imageSrc: "/images/overview/birthday-dinner.jpg",
-		total: "$1,470",
-		totalNote: "Cash on delivery",
-		waitingOn: "Caterer to call the host",
-		status: "Accepted",
-	},
-	{
-		code: "AZ-2444",
-		occasionTitle: "Corporate Breakfast",
-		occasionMeta: "2 Sep 2026 · 9:00 AM · 45 guests",
-		breadcrumb: "Breakfast · Yummy Catering",
-		imageSrc: "/images/overview/corporate-breakfast.jpg",
-		total: "$315",
-		totalNote: "Cash on delivery",
-		waitingOn: "Waiting on caterer",
-		status: "Awaiting response",
-	},
-	{
-		code: "AZ-2451",
-		occasionTitle: "Weekend Dinner",
-		occasionMeta: "20 Sep 2026 · 8:00 PM · 60 guests",
-		breadcrumb: "Dinner · Yummy Catering",
-		imageSrc: "/images/overview/birthday-dinner.jpg",
-		total: "$1,440",
-		totalNote: "Paid online",
-		waitingOn: "Waiting on caterer",
-		status: "Awaiting response",
-	},
-	{
-		code: "AZ-2455",
-		occasionTitle: "Sunday Family Lunch",
-		occasionMeta: "11 Sep 2026 · 1:30 PM · 22 guests",
-		breadcrumb: "Lunch · Yummy Catering",
-		imageSrc: "/images/overview/team-lunch.jpg",
-		total: "$242",
-		totalNote: "Cash on delivery",
-		waitingOn: "Waiting on caterer",
-		status: "Awaiting response",
-	},
+const TABS: { id: OrderTab; label: string }[] = [
+	{ id: "all", label: "All" },
+	{ id: "awaiting", label: "Awaiting reply" },
+	{ id: "in_progress", label: "In progress" },
+	{ id: "delivered", label: "Delivered" },
+	{ id: "declined", label: "Declined or cancelled" },
 ];
 
-type TabId = "all" | "awaiting" | "in_progress" | "delivered" | "declined";
-
-const TABS: { id: TabId; label: string; count: number }[] = [
-	{ id: "all", label: "All", count: 10 },
-	{ id: "awaiting", label: "Awaiting reply", count: 4 },
-	{ id: "in_progress", label: "In progress", count: 4 },
-	{ id: "delivered", label: "Delivered", count: 1 },
-	{ id: "declined", label: "Declined or cancelled", count: 1 },
+const SCOPES: { id: OrderScope; label: string }[] = [
+	{ id: "any", label: "Everything" },
+	{ id: "open", label: "Still open" },
+	{ id: "week", label: "Next 7 days" },
 ];
 
-function StatusPill({ status }: { status: OrderStatus }) {
-	const styles: Record<OrderStatus, string> = {
-		"Awaiting response":
-			"bg-[#FCF4E7] dark:bg-amber-950/50 text-[#915B1E] dark:text-amber-300",
-		"On the way":
-			"bg-[#EAF5EC] dark:bg-emerald-950/50 text-[#2D6A42] dark:text-emerald-300",
-		"Contact confirmed":
-			"bg-[#F3F0EC] dark:bg-stone-800 text-[#666059] dark:text-stone-300",
-		Preparing:
-			"bg-[#F3F0EC] dark:bg-stone-800 text-[#666059] dark:text-stone-300",
-		Accepted:
-			"bg-[#F3F0EC] dark:bg-stone-800 text-[#666059] dark:text-stone-300",
-	};
-	return (
-		<span
-			className={`inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-semibold ${styles[status]}`}
-		>
-			{status}
-		</span>
-	);
-}
-
-function WaitingOnCell({ value }: { value: WaitingOn }) {
+function WaitingOnCell({ status }: { status: string }) {
+	const value = ORDER_WAITING_ON[status as OrderStatus] ?? "—";
 	let className = "text-[#78716C] dark:text-stone-400";
-	if (value === "On the way" || value === "In the kitchen") {
+	if (status === "on_the_way" || status === "preparing") {
 		className = "text-[#2D6A42] dark:text-emerald-400";
-	} else if (
-		value === "Host contacted" ||
-		value === "Waiting on caterer"
-	) {
+	} else if (status === "confirmed" || status === "pending" || status === "reconfirming") {
 		className = "text-[#915B1E] dark:text-amber-400";
 	}
 	return <span className={`text-xs sm:text-sm font-medium ${className}`}>{value}</span>;
 }
 
 export function AdminOrders() {
-	const [activeTab, setActiveTab] = useState<TabId>("all");
+	const [activeTab, setActiveTab] = useState<OrderTab>("all");
+	const [scope, setScope] = useState<OrderScope>("any");
+	const [searchQuery, setSearchQuery] = useState("");
+	const q = useDebounced(searchQuery.trim());
+
+	const orders = useApi(
+		(signal) => adminApi.orders({ tab: activeTab, scope, q, page_size: 100 }, signal),
+		[activeTab, scope, q],
+	);
+	const counts = orders.data?.counts;
+	const rows = orders.data?.results ?? [];
 
 	return (
 		<div className="mx-auto w-full max-w-5xl space-y-4 pb-16 font-sans">
@@ -179,6 +63,8 @@ export function AdminOrders() {
 				<MagnifyingGlassIcon className="pointer-events-none absolute left-4 top-1/2 size-4 -translate-y-1/2 text-[#78716C]" />
 				<input
 					type="text"
+					value={searchQuery}
+					onChange={(e) => setSearchQuery(e.target.value)}
 					placeholder="Search by reference, occasion, host or caterer"
 					className="h-11 w-full rounded-full border border-[#EFECE6] dark:border-stone-800 bg-white dark:bg-stone-900/60 pl-10 pr-4 text-sm text-[#1C1917] placeholder:text-[#A8A29E] outline-none focus-visible:border-ring focus-visible:ring-[3px] focus-visible:ring-ring/30 transition-colors"
 				/>
@@ -207,22 +93,28 @@ export function AdminOrders() {
 										: "bg-[#EFECE6] dark:bg-stone-800 text-[#78716C] dark:text-stone-400"
 								}`}
 							>
-								{tab.count}
+								{counts?.[tab.id] ?? 0}
 							</span>
 						</button>
 					);
 				})}
 			</div>
 
-			{/* Filter chip */}
-			<div>
-				<button
-					type="button"
-					className="inline-flex items-center gap-1.5 rounded-full bg-[#FAF8F5] dark:bg-stone-900/60 border border-[#EFECE6] dark:border-stone-800 px-3.5 py-1.5 text-xs font-semibold text-[#1C1917] dark:text-stone-200 hover:bg-[#F5F2EC] dark:hover:bg-stone-800 transition-colors"
+			{/* Scope filter */}
+			<div className="relative inline-block">
+				<select
+					value={scope}
+					onChange={(e) => setScope(e.target.value as OrderScope)}
+					aria-label="Order scope"
+					className="appearance-none inline-flex items-center rounded-full bg-[#FAF8F5] dark:bg-stone-900/60 border border-[#EFECE6] dark:border-stone-800 pl-3.5 pr-8 py-1.5 text-xs font-semibold text-[#1C1917] dark:text-stone-200 hover:bg-[#F5F2EC] dark:hover:bg-stone-800 transition-colors cursor-pointer outline-none"
 				>
-					Still open
-					<CaretDownIcon className="size-3.5" />
-				</button>
+					{SCOPES.map((option) => (
+						<option key={option.id} value={option.id}>
+							{option.label}
+						</option>
+					))}
+				</select>
+				<CaretDownIcon className="pointer-events-none absolute right-3 top-1/2 size-3.5 -translate-y-1/2" />
 			</div>
 
 			{/* Table card */}
@@ -238,25 +130,54 @@ export function AdminOrders() {
 
 				{/* Rows */}
 				<div className="divide-y divide-[#F5F2EC] dark:divide-stone-800/80">
-					{ORDERS.map((row) => {
-						const href = `/admin/orders/${row.code.replace(/-/g, "")}`;
+					{orders.loading && !orders.data ? (
+						<div className="py-12 text-center text-sm text-[#78716C] dark:text-stone-400">Loading orders…</div>
+					) : orders.error ? (
+						<div className="py-12 text-center text-sm text-[#B83E28]">
+							{orders.error.message}{" "}
+							<button type="button" onClick={orders.reload} className="underline cursor-pointer">
+								Try again
+							</button>
+						</div>
+					) : rows.length === 0 ? (
+						<div className="py-12 text-center text-sm text-[#78716C] dark:text-stone-400">
+							No orders match these filters.
+						</div>
+					) : null}
+					{rows.map((order) => {
+						const row = {
+							code: order.order_number,
+							occasionTitle: order.title || "Order",
+							occasionMeta: joinParts([
+								dateLabel(order.delivery_date),
+								timeLabel(order.delivery_time),
+								pluralize(order.guest_count, "guest"),
+							]),
+							breadcrumb: joinParts([
+								order.meal_type ? order.meal_type.charAt(0).toUpperCase() + order.meal_type.slice(1) : "",
+								order.provider.business_name,
+							]),
+							imageSrc: occasionImage(order.meal_type),
+							total: money(order.total_amount),
+							totalNote: paymentMethodLabel(order.payment),
+							isRev: order.status === "reconfirming",
+						};
+						const href = `/admin/orders/${order.id}`;
 						return (
 							<Link
-								key={row.code}
+								key={order.id}
 								href={href}
 								className="grid grid-cols-1 sm:grid-cols-[minmax(0,1.1fr)_minmax(0,1.5fr)_minmax(0,0.9fr)_minmax(0,1.1fr)_minmax(0,1fr)] gap-4 px-5 py-4 hover:bg-[#FAF8F5]/60 dark:hover:bg-stone-800/40 transition-colors items-center"
 							>
 								{/* Order: thumbnail + code + breadcrumb */}
 								<div className="flex items-center gap-3">
-									<div className="relative size-11 shrink-0 rounded-lg overflow-hidden border border-[#EFECE6] dark:border-stone-700 bg-stone-100 shadow-2xs">
-										<Image
-											src={row.imageSrc}
-											alt={row.occasionTitle}
-											fill
-											className="object-cover"
-											sizes="44px"
-										/>
-									</div>
+									<MediaThumb
+										src={null}
+										fallbackSrc={row.imageSrc}
+										label={row.occasionTitle}
+										sizes="44px"
+										className="size-11 rounded-lg"
+									/>
 									<div className="space-y-0.5 min-w-0">
 										<div className="flex items-center gap-1.5 flex-wrap">
 											<span className="font-bold text-sm text-[#8B351F] dark:text-amber-400">
@@ -296,12 +217,12 @@ export function AdminOrders() {
 
 								{/* Waiting on */}
 								<div className="flex items-center">
-									<WaitingOnCell value={row.waitingOn} />
+									<WaitingOnCell status={order.status} />
 								</div>
 
 								{/* Status */}
 								<div>
-									<StatusPill status={row.status} />
+									<OrderStatusPill status={order.status} />
 								</div>
 							</Link>
 						);

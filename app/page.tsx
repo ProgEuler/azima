@@ -1,17 +1,25 @@
-import { Button } from "@/components/ui/button"
-import Link from "next/link"
+"use client"
 
+import { useEffect } from "react"
+import { useRouter } from "next/navigation"
+import { homeFor, useAuth } from "@/components/auth-provider"
+
+/** Entry point: send visitors to their portal, or to sign in. */
 export default function Page() {
+   const router = useRouter()
+   const { user, status } = useAuth()
+
+   useEffect(() => {
+      if (status === "anonymous") router.replace("/signin")
+      else if (status === "authenticated" && user) router.replace(homeFor(user))
+   }, [status, user, router])
+
    return (
-      <div className="flex min-h-svh p-6">
-         <div className="m-auto flex max-w-md min-w-0 flex-col items-center justify-center gap-4 text-sm leading-loose">
-            <Link href="/provider">
-               <Button>Provider</Button>
-            </Link>
-            <Link href="/admin">
-               <Button>Admin</Button>
-            </Link>
-         </div>
+      <div
+         role="status"
+         className="flex min-h-svh items-center justify-center text-muted-foreground text-sm"
+      >
+         Loading…
       </div>
    )
 }
