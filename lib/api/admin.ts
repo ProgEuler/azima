@@ -87,6 +87,43 @@ export type ProviderList = Paginated<AdminProvider> & {
 	counts: { all: number; active: number; suspended: number }
 }
 
+export type AdminUser = {
+	id: string
+	full_name: string
+	email: string | null
+	phone: string | null
+	avatar: string | null
+	address: string
+	created_at: string
+	is_suspended: boolean
+	occasions_count: number
+	orders_count: number
+	cancelled_orders: number
+	booked_total: string
+}
+
+export type AdminUserDetail = AdminUser & {
+	live_occasions: number
+	cancellation_rate: number
+	suspension_reason: string
+	suspended_at: string | null
+	occasions: Array<{
+		id: string
+		title: string
+		event_date: string
+		meal_type: string
+		guests: number | null
+		is_active: boolean
+		amount: string
+		status: string | null
+		status_label: string | null
+	}>
+}
+
+export type UserList = Paginated<AdminUser> & {
+	counts: { all: number; active: number; suspended: number }
+}
+
 export const adminApi = {
 	providers: (
 		query: { status?: string; q?: string; page?: number; page_size?: number },
@@ -98,6 +135,15 @@ export const adminApi = {
 		post<AdminProvider>(`/admin/providers/${id}/suspend/`, { reason }),
 	reinstateProvider: (id: string) =>
 		post<AdminProvider>(`/admin/providers/${id}/reinstate/`),
+	users: (
+		query: { status?: string; q?: string; page?: number; page_size?: number },
+		signal?: AbortSignal,
+	) => getPage<AdminUser>("/admin/users/", query, signal) as Promise<UserList>,
+	user: (id: string, signal?: AbortSignal) =>
+		get<AdminUserDetail>(`/admin/users/${id}/`, undefined, signal),
+	suspendUser: (id: string, reason: string) =>
+		post<AdminUserDetail>(`/admin/users/${id}/suspend/`, { reason }),
+	reinstateUser: (id: string) => post<AdminUserDetail>(`/admin/users/${id}/reinstate/`),
 	applications: (signal?: AbortSignal) =>
 		get<PendingApplication[]>("/admin/providers/applications/", undefined, signal),
 	approveApplication: (id: string) =>

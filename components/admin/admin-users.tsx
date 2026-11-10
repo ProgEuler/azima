@@ -1,30 +1,23 @@
 "use client";
 
-import { useState, useMemo } from "react";
-import Image from "next/image";
+import { useState } from "react";
 import Link from "next/link";
-import { MagnifyingGlassIcon } from "@phosphor-icons/react";
 import { cn } from "@/lib/utils";
-import { adminHostUsers, type AdminHostUser } from "@/lib/mock-data";
+import { MediaThumb } from "@/components/media-thumb";
+import { useApi, useDebounced } from "@/hooks/use-api";
+import { adminApi } from "@/lib/api/admin";
+import { money } from "@/lib/format";
 
 export function AdminUsers() {
 	const [searchQuery, setSearchQuery] = useState("");
 	const [statusFilter, setStatusFilter] = useState<"all" | "active" | "suspended">("all");
+	const q = useDebounced(searchQuery.trim());
 
-	const filteredUsers = useMemo(() => {
-		return adminHostUsers.filter((user) => {
-			const matchesStatus =
-				statusFilter === "all" || user.status === statusFilter;
-			const q = searchQuery.toLowerCase().trim();
-			const matchesSearch =
-				!q ||
-				user.name.toLowerCase().includes(q) ||
-				user.email.toLowerCase().includes(q) ||
-				user.phone.toLowerCase().includes(q);
-
-			return matchesStatus && matchesSearch;
-		});
-	}, [searchQuery, statusFilter]);
+	const users = useApi(
+		(signal) => adminApi.users({ status: statusFilter, q, page_size: 100 }, signal),
+		[statusFilter, q],
+	);
+	const filteredUsers = users.data?.results ?? [];
 
 	return (
 		<div className="mx-auto w-full max-w-5xl space-y-6 pb-12 font-sans">
@@ -121,7 +114,22 @@ export function AdminUsers() {
 
 						{/* Table Body */}
 						<tbody className="divide-y divide-[#F5F2EC] dark:divide-stone-800/80">
-							{filteredUsers.length === 0 ? (
+							{users.loading && !users.data ? (
+								<tr>
+									<td colSpan={6} className="py-12 text-center text-sm text-[#78716C] dark:text-stone-400">
+										Loading users…
+									</td>
+								</tr>
+							) : users.error ? (
+								<tr>
+									<td colSpan={6} className="py-12 text-center text-sm text-[#B83E28]">
+										{users.error.message}{" "}
+										<button type="button" onClick={users.reload} className="underline cursor-pointer">
+											Try again
+										</button>
+									</td>
+								</tr>
+							) : filteredUsers.length === 0 ? (
 								<tr>
 									<td
 										colSpan={6}
@@ -139,28 +147,19 @@ export function AdminUsers() {
 										{/* Full Name & Avatar */}
 										<td className="py-3.5 px-5">
 											<div className="flex items-center gap-3.5">
-												{user.avatarImage ? (
-													<div className="relative size-10 rounded-full overflow-hidden shrink-0 border border-stone-200/60 dark:border-stone-700 bg-stone-100">
-														<Image
-															src={user.avatarImage}
-															alt={user.name}
-															fill
-															className="object-cover"
-															sizes="40px"
-														/>
-													</div>
-												) : (
-													<div className="size-10 rounded-full shrink-0 flex items-center justify-center font-bold text-xs bg-[#FBF0EB] text-[#A3432B] dark:bg-amber-950/40 dark:text-amber-400 border border-[#F5E2DA] dark:border-amber-900/40">
-														{user.avatarInitials}
-													</div>
-												)}
+												<MediaThumb
+													src={user.avatar}
+													label={user.full_name}
+													sizes="40px"
+													className="size-10 rounded-full"
+												/>
 
 												<div className="space-y-0.5">
 													<div className="font-bold text-sm text-[#1C1917] dark:text-stone-100">
-														{user.name}
+														{user.full_name || user.email || user.phone}
 													</div>
 													<div className="text-xs text-[#78716C] dark:text-stone-400">
-														{user.email}
+														{user.email ?? "—"}
 													</div>
 												</div>
 											</div>
@@ -168,22 +167,22 @@ export function AdminUsers() {
 
 										{/* Phone Number */}
 										<td className="py-3.5 px-5 text-xs md:text-sm font-medium text-[#1C1917] dark:text-stone-200 whitespace-nowrap">
-											{user.phone}
+											{user.phone ?? "—"}
 										</td>
 
 										{/* Occasions */}
 										<td className="py-3.5 px-5 text-xs md:text-sm font-medium text-[#1C1917] dark:text-stone-200">
-											{user.occasions}
+											{user.occasions_count}
 										</td>
 
 										{/* Booked */}
 										<td className="py-3.5 px-5 text-xs md:text-sm font-bold text-[#1C1917] dark:text-stone-100 whitespace-nowrap">
-											{user.booked}
+											{user.orders_count > 0 ? money(user.booked_total) : "—"}
 										</td>
 
 										{/* Status */}
 										<td className="py-3.5 px-5 whitespace-nowrap">
-											{user.status === "active" ? (
+											{!user.is_suspended ? (
 												<span className="inline-flex items-center rounded-full bg-[#EAF5EC] dark:bg-emerald-950/50 px-3 py-1 text-xs font-semibold text-[#2D6A42] dark:text-emerald-300">
 													active
 												</span>
