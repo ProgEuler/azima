@@ -1,21 +1,24 @@
-# Next.js template
+# Azima web portal
 
-This is a Next.js template with shadcn/ui.
+Next.js (App Router) + shadcn/ui portal for **caterers** (`/provider`) and **administrators** (`/admin`). Every screen loads and saves through the Azima Django API.
 
-## Adding components
-
-To add components to your app, run the following command:
+## Run it
 
 ```bash
-npx shadcn@latest add button
+cp .env.example .env.local        # NEXT_PUBLIC_API_URL=http://localhost:8000/api/v1
+npm install
+npm run dev                       # http://localhost:3000
 ```
 
-This will place the ui components in the `components` directory.
+Start the API from the backend repo (`python manage.py runserver`) and, for demo data, run `python manage.py seed_demo --reset`. Demo logins (password `Demo12345!`): `admin@demo.azima.test`, `kitchen.yummy@demo.azima.test`.
 
-## Using components
+## How it is organised
 
-To use the components in your app, import them as follows:
+- `lib/api/*` — typed API client (`client.ts` handles auth headers, token refresh and error shapes) and one module per area (`auth`, `admin`, `provider`, `notifications`, `support`).
+- `hooks/use-api.ts` — small data hook (`loading`, `error`, `reload`); `components/form-error.tsx` renders request failures.
+- `components/auth-provider.tsx` / `auth-guard.tsx` — session, role-based redirects, provider approval gate.
+- `lib/format.ts`, `lib/order-meta.ts` — display helpers shared by admin and provider screens.
 
-```tsx
-import { Button } from "@/components/ui/button";
-```
+## Scripts
+
+`npm run typecheck` · `npm run lint` · `npm run build`
