@@ -3,7 +3,7 @@
 import { useState } from "react"
 import Link from "next/link"
 import { useRouter } from "next/navigation"
-import { useForm } from "react-hook-form"
+import { Controller, useForm } from "react-hook-form"
 import { zodResolver } from "@hookform/resolvers/zod"
 import { z } from "zod"
 import {
@@ -15,6 +15,8 @@ import { onboardingStore } from "@/lib/onboarding-store"
 import { OnboardingShell } from "@/components/onboarding-shell"
 import { OnboardingStepper } from "@/components/onboarding-stepper"
 import { Button } from "@/components/ui/button"
+import { PhoneInput } from "@/components/ui/phone-input"
+import { isValidMobile, PHONE_ERROR } from "@/lib/phone"
 import { Field } from "@/components/ui/field"
 import {
 	InputGroup,
@@ -28,8 +30,8 @@ const schema = z.object({
 	businessEmail: z.string().email("Email must be valid"),
 	phone: z
 		.string()
-		.min(7, "Phone number is required")
-		.regex(/^[0-9+()\-\s]+$/u, "Phone number must be valid"),
+		.min(1, "Phone number is required")
+		.refine(isValidMobile, PHONE_ERROR),
 	password: z
 		.string()
 		.min(8, "Password must be at least 8 characters"),
@@ -43,6 +45,7 @@ export function ApplyForm() {
 
 	const {
 		register,
+		control,
 		handleSubmit,
 		formState: { errors, isSubmitting },
 	} = useForm<FormValues>({
@@ -111,15 +114,18 @@ export function ApplyForm() {
 						error={errors.phone?.message}
 						hint="Shown to a host once you accept their request."
 					>
-						<InputGroup>
-							<InputGroupInput
-								type="tel"
-								placeholder="+961 3 000 000"
-								autoComplete="tel"
-								aria-invalid={!!errors.phone}
-								{...register("phone")}
-							/>
-						</InputGroup>
+						<Controller
+							control={control}
+							name="phone"
+							render={({ field }) => (
+								<PhoneInput
+									value={field.value}
+									onChange={field.onChange}
+									onBlur={field.onBlur}
+									invalid={!!errors.phone}
+								/>
+							)}
+						/>
 					</Field>
 
 					<Field label="Password" error={errors.password?.message}>

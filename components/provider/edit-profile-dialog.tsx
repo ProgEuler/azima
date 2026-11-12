@@ -1,5 +1,7 @@
 "use client";
 
+import { PhoneInput } from "@/components/ui/phone-input";
+import { isValidMobile, PHONE_ERROR } from "@/lib/phone";
 import { useRef, useState } from "react";
 import Image from "next/image";
 import { UploadSimpleIcon } from "@phosphor-icons/react";
@@ -80,8 +82,15 @@ function ProfileForm({
 		setCoverPreview(URL.createObjectURL(file));
 	}
 
+	const [phoneTouched, setPhoneTouched] = useState(false);
+	const phoneOk = isValidMobile(form.phone);
+
 	async function submit(event: React.FormEvent) {
 		event.preventDefault();
+		if (!phoneOk) {
+			setPhoneTouched(true);
+			return;
+		}
 		setBusy(true);
 		setError(null);
 		try {
@@ -131,7 +140,9 @@ function ProfileForm({
 					<Field label="Business name"><Input value={form.business_name} onChange={(e) => set("business_name", e.target.value)} /></Field>
 					<Field label="City"><Input value={form.city} onChange={(e) => set("city", e.target.value)} /></Field>
 					<Field label="Your name"><Input value={form.owner_name} onChange={(e) => set("owner_name", e.target.value)} /></Field>
-					<Field label="Phone hosts call"><Input type="tel" value={form.phone} onChange={(e) => set("phone", e.target.value)} /></Field>
+					<Field label="Phone hosts call" error={phoneTouched && !phoneOk ? PHONE_ERROR : undefined}>
+						<PhoneInput value={form.phone} onChange={(v) => set("phone", v)} onBlur={() => setPhoneTouched(true)} invalid={phoneTouched && !phoneOk} />
+					</Field>
 				</div>
 				<Field label="What you are known for">
 					<Textarea rows={3} value={form.description} onChange={(e) => set("description", e.target.value)} />
